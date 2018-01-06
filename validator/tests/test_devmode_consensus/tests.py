@@ -119,3 +119,5 @@ class TestCheckPublishBlock(unittest.TestCase):
         return Setting(
             entries=[Setting.Entry(key=key, value=value)]
         ).SerializeToString()
+if __name__ == '__main__':
+    unittest.main()

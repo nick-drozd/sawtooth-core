@@ -261,3 +261,5 @@ class TestValidatorConfig(unittest.TestCase):
             os.environ.clear()
             os.environ.update(orig_environ)
             shutil.rmtree(directory)
+if __name__ == '__main__':
+    unittest.main()

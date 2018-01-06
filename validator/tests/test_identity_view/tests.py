@@ -255,3 +255,5 @@ def _get_role_address(role_name):
     addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
 
     return IDENTITY_NAMESPACE + ROLE_PREFIX + ''.join(addr_parts)
+if __name__ == '__main__':
+    unittest.main()

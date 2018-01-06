@@ -623,3 +623,5 @@ class TestIdentityCache(unittest.TestCase):
         self.assertEqual(
             self._identity_cache.get_role("network", "state_root"),
             identity_view.get_role("network"))
+if __name__ == '__main__':
+    unittest.main()

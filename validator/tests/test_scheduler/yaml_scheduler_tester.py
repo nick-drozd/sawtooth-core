@@ -658,3 +658,5 @@ class TransactionExecutionContext(object):
         self.txn_num = txn_num
         self.batch_num = batch_num
         self.state = state
+if __name__ == '__main__':
+    unittest.main()

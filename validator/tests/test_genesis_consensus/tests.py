@@ -216,3 +216,5 @@ class TestGenesisBlockVerifier(unittest.TestCase):
 
         result = block_verifier.verify_block(block_wrapper)
         self.assertFalse(result)
+if __name__ == '__main__':
+    unittest.main()

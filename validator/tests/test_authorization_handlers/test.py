@@ -461,3 +461,5 @@ class TestAuthorizationHandlers(unittest.TestCase):
         self.assertEqual(
             handler_status.message_type,
             validator_pb2.Message.AUTHORIZATION_VIOLATION)
+if __name__ == '__main__':
+    unittest.main()

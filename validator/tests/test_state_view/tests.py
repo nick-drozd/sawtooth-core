@@ -62,3 +62,5 @@ class StateViewTest(unittest.TestCase):
         self.assertEqual('hello', next_state_view.get('abcd').decode())
         self.assertEqual({'abcd': 'hello'.encode()},
                          next_state_view.leaves(''))
+if __name__ == '__main__':
+    unittest.main()

@@ -1574,3 +1574,5 @@ class TestReceiptEventExtractor(unittest.TestCase):
                 change_sets[1][0], change_sets[0][1],
             ]).SerializeToString(),
         )])
+if __name__ == '__main__':
+    unittest.main()

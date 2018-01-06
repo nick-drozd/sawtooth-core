@@ -228,3 +228,5 @@ class TestMessageValidation(unittest.TestCase):
         block = block_list[0]
         valid = verifier.is_valid_block(block)
         self.assertFalse(valid)
+if __name__ == '__main__':
+    unittest.main()

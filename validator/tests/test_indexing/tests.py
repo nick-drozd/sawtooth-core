@@ -570,3 +570,5 @@ def _serialize_tuple(tup):
 def _deserialize_tuple(bytestring):
     (rec_id, name, data) = tuple(bytestring.decode().split('-'))
     return (int(rec_id), name, data)
+if __name__ == '__main__':
+    unittest.main()

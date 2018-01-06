@@ -1500,3 +1500,5 @@ class TestContextManager(unittest.TestCase):
             virtual=False)
         self.assertEqual(sh2, sh2_assertion,
                          "The final state hash must be correct")
+if __name__ == '__main__':
+    unittest.main()

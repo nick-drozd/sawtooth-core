@@ -198,3 +198,5 @@ def _hash(key):
 
 def _random_string(length):
     return ''.join(random.choice(ascii_lowercase) for _ in range(length))
+if __name__ == '__main__':
+    unittest.main()

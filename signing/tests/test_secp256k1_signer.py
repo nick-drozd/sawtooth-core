@@ -153,3 +153,5 @@ class Secp256k1SigningTest(unittest.TestCase):
         # This signature doesn't match for MSG1/KEY1
         result = context.verify(MSG2_KEY2_SIG, MSG1.encode(), pub_key1)
         self.assertEqual(result, False)
+if __name__ == '__main__':
+    unittest.main()

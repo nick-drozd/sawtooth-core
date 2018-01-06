@@ -203,3 +203,5 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
 
         self.assertFalse(
             self._validation_rule_enforcer.validate(blkw, "state_root"))
+if __name__ == '__main__':
+    unittest.main()

@@ -169,3 +169,5 @@ def _key_to_address(key):
     key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
     return ''.join(_short_hash(x) for x in key_parts)
+if __name__ == '__main__':
+    unittest.main()

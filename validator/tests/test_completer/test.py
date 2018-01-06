@@ -306,3 +306,5 @@ class TestCompleter(unittest.TestCase):
         self.assertIn(batch.header_signature, self.batches)
         self.assertEqual(missing_batch,
                          self.completer.get_batch_by_transaction("Missing"))
+if __name__ == '__main__':
+    unittest.main()

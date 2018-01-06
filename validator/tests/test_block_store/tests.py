@@ -292,3 +292,5 @@ def _get_first_txn_id(block):
             return txn.header_signature
 
     return None
+if __name__ == '__main__':
+    unittest.main()

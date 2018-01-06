@@ -272,3 +272,5 @@ class TestGenesisController(unittest.TestCase):
                 header=BlockHeader(
                     block_num=0, previous_block_id=NULL_BLOCK_IDENTIFIER)
                 .SerializeToString()))
+if __name__ == '__main__':
+    unittest.main()

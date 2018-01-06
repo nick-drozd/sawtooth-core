@@ -109,3 +109,5 @@ class TestDuplicateHandler(unittest.TestCase):
         handler_status = self.handler.handle(
             "connection_id", message.SerializeToString())
         self.assertEqual(handler_status.status, HandlerStatus.DROP)
+if __name__ == '__main__':
+    unittest.main()

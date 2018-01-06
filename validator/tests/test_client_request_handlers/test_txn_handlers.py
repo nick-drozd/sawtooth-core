@@ -614,3 +614,5 @@ class TestTransactionGetRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.transaction.SerializeToString())
+if __name__ == '__main__':
+    unittest.main()

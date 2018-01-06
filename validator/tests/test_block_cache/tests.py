@@ -63,3 +63,5 @@ class BlockCacheTest(unittest.TestCase):
         self.assertIn("ABC", cache)
         self.assertNotIn("DEF", cache)
         self.assertIn("FED", cache)
+if __name__ == '__main__':
+    unittest.main()

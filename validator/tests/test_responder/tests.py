@@ -563,3 +563,5 @@ class TestResponder(unittest.TestCase):
                 connection_id in self.responder.get_request(requested_id))
         else:
             self.assertIsNone(self.responder.get_request(requested_id))
+if __name__ == '__main__':
+    unittest.main()

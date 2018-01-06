@@ -76,3 +76,5 @@ class TestDispatcherIdentityMessageMatch(unittest.TestCase):
 
     def tearDown(self):
         self._dispatcher.stop()
+if __name__ == '__main__':
+    unittest.main()

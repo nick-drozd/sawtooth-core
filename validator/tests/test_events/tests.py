@@ -405,3 +405,5 @@ class TpEventAddHandlerTest(unittest.TestCase):
         response = handler.handle("test_conn_id", request)
 
         self.assertEqual(HandlerStatus.RETURN, response.status)
+if __name__ == '__main__':
+    unittest.main()
