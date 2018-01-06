@@ -28,6 +28,9 @@ from sawtooth_validator.execution.execution_context \
 from sawtooth_validator.execution.execution_context import ExecutionContext
 
 
+from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.protobuf.events_pb2 import Event
+from typing import Any, Callable, Dict, List, Tuple, Union
 LOGGER = logging.getLogger(__name__)
 
 
@@ -42,9 +45,34 @@ class SquashException(Exception):
 _SHUTDOWN_SENTINEL = -1
 
 
+class _ThreadsafeContexts(object):
+    def __init__(self) -> None:
+        self._lock = Lock()
+        self._data: Dict[str, ExecutionContext] = dict()
+
+    def __getitem__(self, item: str) -> ExecutionContext:
+        return self.get(item)
+
+    def __setitem__(self, key: str, value: ExecutionContext) -> None:
+        with self._lock:
+            self._data[key] = value
+
+    def __contains__(self, item: str):
+        with self._lock:
+            return item in self._data
+
+    def get(self, item: str):
+        with self._lock:
+            return self._data[item]
+
+    def __delitem__(self, key: str) -> None:
+        with self._lock:
+            del self._data[key]
+
+
 class ContextManager(object):
 
-    def __init__(self, database):
+    def __init__(self, database: DictDatabase) -> None:
         """
 
         Args:
@@ -59,9 +87,9 @@ class ContextManager(object):
 
         self._namespace_regex = re.compile('^([0-9a-f]{2}){0,35}$')
 
-        self._address_queue = Queue()
+        self._address_queue: Any = Queue()
 
-        self._inflated_addresses = Queue()
+        self._inflated_addresses: Any = Queue()
 
         self._context_reader = _ContextReader(database, self._address_queue,
                                               self._inflated_addresses)
@@ -71,22 +99,22 @@ class ContextManager(object):
                                               self._contexts)
         self._context_writer.start()
 
-    def get_first_root(self):
+    def get_first_root(self) -> str:
         if self._first_merkle_root is not None:
             return self._first_merkle_root
         self._first_merkle_root = MerkleDatabase(
             self._database).get_merkle_root()
         return self._first_merkle_root
 
-    def address_is_valid(self, address):
+    def address_is_valid(self, address: str) -> bool:
 
         return self._address_regex.match(address) is not None
 
-    def namespace_is_valid(self, namespace):
+    def namespace_is_valid(self, namespace: str) -> bool:
 
         return self._namespace_regex.match(namespace) is not None
 
-    def create_context(self, state_hash, base_contexts, inputs, outputs):
+    def create_context(self, state_hash: str, base_contexts: List[str], inputs: List[str], outputs: List[str]) -> str:
         """Create a ExecutionContext to run a transaction against.
 
         Args:
@@ -140,7 +168,7 @@ class ContextManager(object):
                 (context.session_id, state_hash, reads))
         return context.session_id
 
-    def _find_address_values_in_chain(self, base_contexts, addresses_to_find):
+    def _find_address_values_in_chain(self, base_contexts: List[str], addresses_to_find: List[str]) -> Any:
         """Breadth first search through the chain of contexts searching for
         the bytes values at the addresses in addresses_to_find.
 
@@ -213,7 +241,7 @@ class ContextManager(object):
 
         return address_values, reads
 
-    def delete_contexts(self, context_id_list):
+    def delete_contexts(self, context_id_list: List[str]) -> None:
         """Delete contexts from the ContextManager.
 
         Args:
@@ -227,7 +255,7 @@ class ContextManager(object):
             if c_id in self._contexts:
                 del self._contexts[c_id]
 
-    def delete(self, context_id, address_list):
+    def delete(self, context_id: str, address_list: Union[List[str], Dict[str, None]]) -> bool:
         """Delete the values associated with list of addresses, for a specific
         context referenced by context_id.
 
@@ -261,7 +289,7 @@ class ContextManager(object):
 
         return True
 
-    def get(self, context_id, address_list):
+    def get(self, context_id: str, address_list: List[str]) -> Union[List[Tuple[str, None]], List[Union[Tuple[str, None], Tuple[str, bytes]]], List[Tuple[str, bytes]]]:
         """Get the values associated with list of addresses, for a specific
         context referenced by context_id.
 
@@ -322,7 +350,7 @@ class ContextManager(object):
 
         return values_list
 
-    def set(self, context_id, address_value_list):
+    def set(self, context_id: str, address_value_list: List[Dict[str, bytes]]) -> bool:
         """Within a context, sets addresses to a value.
 
         Args:
@@ -356,7 +384,7 @@ class ContextManager(object):
         context.set_direct(add_value_dict)
         return True
 
-    def get_squash_handler(self):
+    def get_squash_handler(self) -> Callable:
         def _squash(state_root, context_ids, persist, clean_up):
             contexts_in_chain = deque()
             contexts_in_chain.extend(context_ids)
@@ -410,11 +438,11 @@ class ContextManager(object):
             return state_hash
         return _squash
 
-    def stop(self):
+    def stop(self) -> None:
         self._address_queue.put_nowait(_SHUTDOWN_SENTINEL)
         self._inflated_addresses.put_nowait(_SHUTDOWN_SENTINEL)
 
-    def add_execution_data(self, context_id, data):
+    def add_execution_data(self, context_id: str, data: bytes) -> bool:
         """Within a context, append data to the execution result.
 
         Args:
@@ -434,7 +462,7 @@ class ContextManager(object):
         context.add_execution_data(data)
         return True
 
-    def add_execution_event(self, context_id, event):
+    def add_execution_event(self, context_id: str, event: Event) -> bool:
         """Within a context, append data to the execution result.
 
         Args:
@@ -454,7 +482,7 @@ class ContextManager(object):
         context.add_execution_event(event)
         return True
 
-    def get_execution_results(self, context_id):
+    def get_execution_results(self, context_id: str) -> Tuple[Dict[str, bytes], Dict[str, None], List[Event], List[bytes]]:
         context = self._contexts.get(context_id)
         return (context.get_all_if_set().copy(),
                 context.get_all_if_deleted().copy(),
@@ -472,7 +500,7 @@ class _ContextReader(InstrumentedThread):
                                           (context_id, [(address, value), ...
     """
 
-    def __init__(self, database, address_queue, inflated_addresses):
+    def __init__(self, database: DictDatabase, address_queue: Queue, inflated_addresses: Queue) -> None:
         super(_ContextReader, self).__init__(name='_ContextReader')
         self._database = database
         self._addresses = address_queue
@@ -502,7 +530,7 @@ class _ContextWriter(InstrumentedThread):
 
     """
 
-    def __init__(self, inflated_addresses, contexts):
+    def __init__(self, inflated_addresses: Queue, contexts: _ThreadsafeContexts) -> None:
         """
         Args:
             inflated_addresses (queue.Queue): Contains the context id of the
@@ -524,28 +552,3 @@ class _ContextWriter(InstrumentedThread):
             inflated_value_map = {k: v for k, v in inflated_address_list}
             if c_id in self._contexts:
                 self._contexts[c_id].set_from_tree(inflated_value_map)
-
-
-class _ThreadsafeContexts(object):
-    def __init__(self):
-        self._lock = Lock()
-        self._data = dict()
-
-    def __getitem__(self, item):
-        return self.get(item)
-
-    def __setitem__(self, key, value):
-        with self._lock:
-            self._data[key] = value
-
-    def __contains__(self, item):
-        with self._lock:
-            return item in self._data
-
-    def get(self, item):
-        with self._lock:
-            return self._data[item]
-
-    def __delitem__(self, key):
-        with self._lock:
-            del self._data[key]

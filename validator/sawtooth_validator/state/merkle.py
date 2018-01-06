@@ -18,12 +18,15 @@ import logging
 import hashlib
 import cbor
 
+from typing import Optional, Dict
+
 LOGGER = logging.getLogger(__name__)
 
 INIT_ROOT_KEY = ''
 
 # prototype node with value and list of child branch:hash pairs
-NODE_PROTO = {
+
+NODE_PROTO: Dict[str, Optional[Dict]] = {
     "v": None,
     "c": {}
 }

@@ -17,6 +17,11 @@ from abc import ABCMeta
 from abc import abstractmethod
 
 
+from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
+from sawtooth_validator.execution.scheduler_serial import SerialScheduler
+from sawtooth_validator.protobuf.transaction_pb2 import Transaction
+from threading import Condition
+from typing import List, Optional, Union
 class Scheduler(object, metaclass=ABCMeta):
     """Abstract class for scheduling transaction execution.
 
@@ -198,7 +203,7 @@ class Scheduler(object, metaclass=ABCMeta):
 
 
 class SchedulerIterator(object):
-    def __init__(self, scheduler, condition, start_index=0):
+    def __init__(self, scheduler: Union[ParallelScheduler, SerialScheduler], condition: Condition, start_index: int = 0) -> None:
         self._scheduler = scheduler
         self._condition = condition
         self._next_index = start_index
@@ -244,7 +249,7 @@ class BatchExecutionResult(object):
             add_batch with a state hash.
     """
 
-    def __init__(self, is_valid, state_hash):
+    def __init__(self, is_valid: bool, state_hash: Optional[str]) -> None:
         self.is_valid = is_valid
         self.state_hash = state_hash
 
@@ -270,9 +275,9 @@ class TxnExecutionResult:
             transaction.
     """
 
-    def __init__(self, signature, is_valid, context_id=None, state_hash=None,
-                 state_changes=None, events=None, data=None, error_message="",
-                 error_data=b""):
+    def __init__(self, signature: Union[str, bool], is_valid: Optional[bool], context_id: Optional[str] = None, state_hash: Optional[str] = None,
+                 state_changes: None = None, events: None = None, data: None = None, error_message: str = "",
+                 error_data: bytes = b"") -> None:
 
         if is_valid and context_id is None:
             raise ValueError(
@@ -304,7 +309,7 @@ class TxnInformation(object):
                                  this txn should be applied against
     """
 
-    def __init__(self, txn, state_hash, base_context_ids):
+    def __init__(self, txn: Transaction, state_hash: str, base_context_ids: List[str]) -> None:
         self.txn = txn
         self.state_hash = state_hash
         self.base_context_ids = base_context_ids

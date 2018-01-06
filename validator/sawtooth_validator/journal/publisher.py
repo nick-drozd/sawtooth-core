@@ -19,6 +19,7 @@ import abc
 from collections import deque
 import logging
 import queue
+from queue import Queue
 from threading import RLock
 import time
 
@@ -40,6 +41,23 @@ from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
 from sawtooth_validator.state.settings_view import SettingsView
 
+from sawtooth_signing import Signer
+from sawtooth_validator.journal.batch_injector import BatchInjector
+from sawtooth_validator.journal.batch_injector import BatchInjectorFactory
+from sawtooth_validator.journal.batch_injector import DefaultBatchInjectorFactory
+from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.block_store import BlockStore
+from sawtooth_validator.journal.block_sender import BlockSender
+from sawtooth_validator.journal.batch_sender import BatchSender
+from sawtooth_validator.journal.consensus.consensus import BlockPublisherInterface
+from sawtooth_validator.execution.scheduler import Scheduler
+from sawtooth_validator.execution.executor import TransactionExecutor
+from sawtooth_validator.state.state_view import StateViewFactory
+from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.protobuf.transaction_pb2 import Transaction
+from typing import Any, Callable, List, Optional, Union
 LOGGER = logging.getLogger(__name__)
 
 
@@ -65,8 +83,8 @@ class PendingBatchObserver(metaclass=abc.ABCMeta):
 
 
 class _PublisherThread(InstrumentedThread):
-    def __init__(self, block_publisher, batch_queue,
-                 check_publish_block_frequency):
+    def __init__(self, block_publisher: BlockPublisherInterface, batch_queue: Queue,
+                 check_publish_block_frequency: float) -> None:
         super().__init__(name='_PublisherThread')
         self._block_publisher = block_publisher
         self._batch_queue = batch_queue
@@ -100,7 +118,7 @@ class _PublisherThread(InstrumentedThread):
             LOGGER.exception(exc)
             LOGGER.critical("BlockPublisher thread exited with error.")
 
-    def stop(self):
+    def stop(self) -> None:
         self._exit = True
 
 
@@ -112,14 +130,14 @@ class _CandidateBlock(object):
     """
 
     def __init__(self,
-                 block_store,
-                 consensus,
-                 scheduler,
-                 committed_txn_cache,
-                 block_builder,
-                 max_batches,
-                 batch_injectors,
-                 ):
+                 block_store: BlockStore,
+                 consensus: BlockPublisherInterface,
+                 scheduler: Scheduler,
+                 committed_txn_cache: TransactionCommitCache,
+                 block_builder: BlockBuilder,
+                 max_batches: int,
+                 batch_injectors: List[BatchInjector]
+                 ) -> None:
         self._pending_batches = []
         self._pending_batch_ids = set()
         self._injected_batch_ids = set()
@@ -134,7 +152,7 @@ class _CandidateBlock(object):
         self._max_batches = max_batches
         self._batch_injectors = batch_injectors
 
-    def __del__(self):
+    def __del__(self) -> None:
         # Cancel the scheduler if it is not complete
         if not self._scheduler.complete(block=False):
             self._scheduler.cancel()
@@ -143,11 +161,11 @@ class _CandidateBlock(object):
     def previous_block_id(self):
         return self._block_builder.previous_block_id
 
-    def has_pending_batches(self):
+    def has_pending_batches(self) -> bool:
         return len(self._pending_batches) != 0
 
     @property
-    def last_batch(self):
+    def last_batch(self) -> Batch:
         if self._pending_batches:
             return self._pending_batches[-1]
         raise ValueError(
@@ -160,13 +178,13 @@ class _CandidateBlock(object):
         return self._pending_batches.copy()
 
     @property
-    def can_add_batch(self):
+    def can_add_batch(self) -> bool:
         return (
             self._max_batches == 0
             or len(self._pending_batches) < self._max_batches
         )
 
-    def _check_batch_dependencies(self, batch, committed_txn_cache):
+    def _check_batch_dependencies(self, batch: Batch, committed_txn_cache: TransactionCommitCache) -> bool:
         """Check the dependencies for all transactions in this are present.
         If all are present the committed_txn is updated with all txn in this
         batch and True is returned. If they are not return failure and the
@@ -193,7 +211,7 @@ class _CandidateBlock(object):
             committed_txn_cache.add(txn.header_signature)
         return True
 
-    def _check_transaction_dependencies(self, txn, committed_txn_cache):
+    def _check_transaction_dependencies(self, txn: Transaction, committed_txn_cache: TransactionCommitCache) -> bool:
         """Check that all this transactions dependencies are present.
         :param txn: the transaction to check
         :param committed_txn_cache: The cache holding the set of committed
@@ -211,7 +229,7 @@ class _CandidateBlock(object):
                 return False
         return True
 
-    def _is_batch_already_committed(self, batch):
+    def _is_batch_already_committed(self, batch: Batch) -> bool:
         """ Test if a batch is already committed to the chain or
         is already in the pending queue.
         :param batch: the batch to check
@@ -219,14 +237,14 @@ class _CandidateBlock(object):
         return (self._block_store.has_batch(batch.header_signature) or
                 batch.header_signature in self._pending_batch_ids)
 
-    def _is_txn_already_committed(self, txn, committed_txn_cache):
+    def _is_txn_already_committed(self, txn: Transaction, committed_txn_cache: TransactionCommitCache) -> bool:
         """ Test if a transaction is already committed to the chain or
         is already in the pending queue.
         """
         return (self._block_store.has_batch(txn.header_signature) or
                 txn.header_signature in committed_txn_cache)
 
-    def _poll_injectors(self, poller, batch_list):
+    def _poll_injectors(self, poller: Callable, batch_list: List[Any]) -> None:
         for injector in self._batch_injectors:
             inject = poller(injector)
             if inject:
@@ -234,7 +252,7 @@ class _CandidateBlock(object):
                     self._injected_batch_ids.add(b.header_signature)
                     batch_list.append(b)
 
-    def add_batch(self, batch):
+    def add_batch(self, batch: Batch) -> None:
         """Add a batch to the _CandidateBlock
         :param batch: the batch to add to the block
         """
@@ -275,13 +293,13 @@ class _CandidateBlock(object):
             LOGGER.debug("Dropping batch due to missing dependencies: %s",
                          batch.header_signature)
 
-    def check_publish_block(self):
+    def check_publish_block(self) -> bool:
         """Check if it is okay to publish this candidate.
         """
         return self._consensus.check_publish_block(
             self._block_builder.block_header)
 
-    def _sign_block(self, block, identity_signer):
+    def _sign_block(self, block: BlockBuilder, identity_signer: Signer) -> None:
         """ The block should be complete and the final
         signature from the publishing validator(this validator) needs to
         be added.
@@ -292,7 +310,7 @@ class _CandidateBlock(object):
         signature = identity_signer.sign(header_bytes)
         block.set_signature(signature)
 
-    def finalize_block(self, identity_signer, pending_batches):
+    def finalize_block(self, identity_signer: Signer, pending_batches: List[Any]) -> Optional[Block]:
         """Compose the final Block to publish. This involves flushing
         the scheduler, having consensus bless the block, and signing
         the block.
@@ -411,21 +429,21 @@ class BlockPublisher(object):
     """
 
     def __init__(self,
-                 transaction_executor,
-                 block_cache,
-                 state_view_factory,
-                 block_sender,
-                 batch_sender,
-                 squash_handler,
-                 chain_head,
-                 identity_signer,
-                 data_dir,
-                 config_dir,
-                 permission_verifier,
-                 check_publish_block_frequency,
-                 batch_observers,
-                 batch_injector_factory=None,
-                 metrics_registry=None):
+                 transaction_executor: TransactionExecutor,
+                 block_cache: BlockCache,
+                 state_view_factory: StateViewFactory,
+                 block_sender: BlockSender,
+                 batch_sender: Union[BlockSender, BatchSender],
+                 squash_handler: None,
+                 chain_head: Optional[BlockWrapper],
+                 identity_signer: Signer,
+                 data_dir: None,
+                 config_dir: None,
+                 permission_verifier: PermissionVerifier,
+                 check_publish_block_frequency: float,
+                 batch_observers: List[Any],
+                 batch_injector_factory: Optional[Union[DefaultBatchInjectorFactory, BatchInjectorFactory]] = None,
+                 metrics_registry: None = None) -> None:
         """
         Initialize the BlockPublisher object
 
@@ -482,21 +500,21 @@ class BlockPublisher(object):
         self._queued_batch_ids = []
         self._batch_observers = batch_observers
         self._check_publish_block_frequency = check_publish_block_frequency
-        self._publisher_thread = None
+        self._publisher_thread: Optional[_PublisherThread] = None
 
-    def start(self):
+    def start(self) -> None:
         self._publisher_thread = _PublisherThread(
             block_publisher=self,
             batch_queue=self._batch_queue,
             check_publish_block_frequency=self._check_publish_block_frequency)
         self._publisher_thread.start()
 
-    def stop(self):
+    def stop(self) -> None:
         if self._publisher_thread is not None:
             self._publisher_thread.stop()
             self._publisher_thread = None
 
-    def queue_batch(self, batch):
+    def queue_batch(self, batch: Batch) -> None:
         """
         New batch has been received, queue it with the BlockPublisher for
         inclusion in the next block.
@@ -521,10 +539,10 @@ class BlockPublisher(object):
         return (len(self._pending_batches), self._get_current_queue_limit())
 
     @property
-    def chain_head_lock(self):
+    def chain_head_lock(self) -> RLock:
         return self._lock
 
-    def _build_candidate_block(self, chain_head):
+    def _build_candidate_block(self, chain_head: BlockWrapper) -> None:
         """ Build a candidate block and construct the consensus object to
         validate it.
         :param chain_head: The block to build on top of.
@@ -591,7 +609,7 @@ class BlockPublisher(object):
             else:
                 break
 
-    def on_batch_received(self, batch):
+    def on_batch_received(self, batch: Batch) -> None:
         """
         A new batch is received, send it for validation
         :param batch: the new pending batch
@@ -612,7 +630,7 @@ class BlockPublisher(object):
                 LOGGER.debug("Batch has an unauthorized signer. Batch: %s",
                              batch.header_signature)
 
-    def _rebuild_pending_batches(self, committed_batches, uncommitted_batches):
+    def _rebuild_pending_batches(self, committed_batches: Optional[List[Batch]], uncommitted_batches: Optional[List[Batch]]) -> None:
         """When the chain head is changed. This recomputes the list of pending
         transactions
         :param committed_batches: Batches committed in the current chain
@@ -655,9 +673,9 @@ class BlockPublisher(object):
                 self._pending_batches.append(batch)
                 self._pending_batch_ids.append(batch.header_signature)
 
-    def on_chain_updated(self, chain_head,
-                         committed_batches=None,
-                         uncommitted_batches=None):
+    def on_chain_updated(self, chain_head: Optional[BlockWrapper],
+                         committed_batches: Optional[List[Batch]] = None,
+                         uncommitted_batches: Optional[List[Batch]] = None) -> None:
         """
         The existing chain has been updated, the current head block has
         changed.
@@ -695,7 +713,7 @@ class BlockPublisher(object):
             LOGGER.critical("on_chain_updated exception.")
             LOGGER.exception(exc)
 
-    def on_check_publish_block(self, force=False):
+    def on_check_publish_block(self, force: bool = False) -> None:
         """Ask the consensus module if it is time to claim the candidate block
         if it is then, claim it and tell the world about it.
         :return:
@@ -746,7 +764,7 @@ class BlockPublisher(object):
             LOGGER.critical("on_check_publish_block exception.")
             LOGGER.exception(exc)
 
-    def _set_gauge(self, value):
+    def _set_gauge(self, value: int) -> None:
         if self._pending_batch_gauge:
             self._pending_batch_gauge.set_value(value)
 
@@ -762,14 +780,14 @@ class BlockPublisher(object):
 
 class _RollingAverage(object):
 
-    def __init__(self, sample_size, initial_value):
+    def __init__(self, sample_size: int, initial_value: int) -> None:
         self._samples = deque(maxlen=sample_size)
 
         self._samples.append(initial_value)
         self._current_average = initial_value
 
     @property
-    def value(self):
+    def value(self) -> int:
         return self._current_average
 
     def update(self, sample):

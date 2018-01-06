@@ -28,6 +28,10 @@ from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
+from sawtooth_validator.execution.scheduler import BatchExecutionResult, SchedulerIterator
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.transaction_pb2 import Transaction
+from typing import Callable, List, Optional, Iterator, Dict
 LOGGER = logging.getLogger(__name__)
 
 
@@ -46,39 +50,39 @@ class SerialScheduler(Scheduler):
     schedulers - for tests related to performance, correctness, etc.
     """
 
-    def __init__(self, squash_handler, first_state_hash, always_persist):
-        self._txn_queue = deque()
-        self._scheduled_transactions = []
-        self._batch_statuses = {}
-        self._txn_to_batch = {}
-        self._batch_by_id = {}
-        self._txn_results = {}
+    def __init__(self, squash_handler: Callable, first_state_hash: str, always_persist: bool) -> None:
+        self._txn_queue: deque = deque()
+        self._scheduled_transactions: List = []
+        self._batch_statuses: Dict = {}
+        self._txn_to_batch: Dict = {}
+        self._batch_by_id: Dict = {}
+        self._txn_results: Dict = {}
         self._in_progress_transaction = None
         self._final = False
         self._cancelled = False
-        self._previous_context_id = None
-        self._previous_valid_batch_c_id = None
+        self._previous_context_id: Optional[str] = None
+        self._previous_valid_batch_c_id: Optional[str] = None
         self._squash = squash_handler
         self._condition = Condition()
         # contains all txn.signatures where txn is
         # last in it's associated batch
-        self._last_in_batch = []
+        self._last_in_batch: List = []
         self._previous_state_hash = first_state_hash
         # The state hashes here are the ones added in add_batch, and
         # are the state hashes that correspond with block boundaries.
-        self._required_state_hashes = {}
+        self._required_state_hashes: Dict = {}
         self._already_calculated = False
         self._always_persist = always_persist
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.cancel()
 
-    def __iter__(self):
+    def __iter__(self) -> SchedulerIterator:
         return SchedulerIterator(self, self._condition)
 
     def set_transaction_execution_result(
-            self, txn_signature, is_valid, context_id, state_changes=None,
-            events=None, data=None, error_message="", error_data=b""):
+            self, txn_signature: str, is_valid: bool, context_id: Optional[str], state_changes: None = None,
+            events: None = None, data: None = None, error_message: str = "", error_data: bytes = b"") -> None:
         with self._condition:
             if (self._in_progress_transaction is None or
                     self._in_progress_transaction != txn_signature):
@@ -126,7 +130,7 @@ class SerialScheduler(Scheduler):
 
             self._condition.notify_all()
 
-    def add_batch(self, batch, state_hash=None, required=False):
+    def add_batch(self, batch: Batch, state_hash: None = None, required: bool = False) -> None:
         with self._condition:
             if self._final:
                 raise SchedulerError("Scheduler is finalized. Cannot take"
@@ -155,11 +159,11 @@ class SerialScheduler(Scheduler):
                 self._txn_queue.append(txn)
             self._condition.notify_all()
 
-    def get_batch_execution_result(self, batch_signature):
+    def get_batch_execution_result(self, batch_signature: str):
         with self._condition:
             return self._batch_statuses.get(batch_signature)
 
-    def get_transaction_execution_results(self, batch_signature):
+    def get_transaction_execution_results(self, batch_signature: str):
         with self._condition:
             batch_status = self._batch_statuses.get(batch_signature)
             if batch_status is None:
@@ -180,16 +184,16 @@ class SerialScheduler(Scheduler):
         with self._condition:
             return len(self._scheduled_transactions)
 
-    def get_transaction(self, index):
+    def get_transaction(self, index: int):
         with self._condition:
             return self._scheduled_transactions[index]
 
-    def _get_dependencies(self, transaction):
+    def _get_dependencies(self, transaction: Transaction) -> List[str]:
         header = TransactionHeader()
         header.ParseFromString(transaction.header)
         return list(header.dependencies)
 
-    def _set_batch_result(self, txn_id, valid, state_hash):
+    def _set_batch_result(self, txn_id: str, valid: bool, state_hash: None) -> None:
         if txn_id not in self._txn_to_batch:
             # An incomplete transaction in progress will have been removed
             return
@@ -204,27 +208,27 @@ class SerialScheduler(Scheduler):
                 self._txn_results[txn.header_signature] = TxnExecutionResult(
                     txn.header_signature, is_valid=False)
 
-    def _get_batch_result(self, txn_id):
+    def _get_batch_result(self, txn_id: str) -> BatchExecutionResult:
         batch_id = self._txn_to_batch[txn_id]
         return self._batch_statuses[batch_id]
 
-    def _dep_is_known(self, txn_id):
+    def _dep_is_known(self, txn_id: str) -> bool:
         return txn_id in self._txn_to_batch
 
-    def _in_invalid_batch(self, txn_id):
+    def _in_invalid_batch(self, txn_id: str) -> bool:
         if self._txn_to_batch[txn_id] in self._batch_statuses:
             dependency_result = self._get_batch_result(txn_id)
             return not dependency_result.is_valid
         return False
 
-    def _handle_fail_fast(self, txn):
+    def _handle_fail_fast(self, txn: Transaction) -> None:
         self._set_batch_result(
             txn.header_signature,
             False,
             None)
         self._check_change_last_good_context_id(txn)
 
-    def _check_change_last_good_context_id(self, txn):
+    def _check_change_last_good_context_id(self, txn: Transaction) -> None:
         if txn.header_signature in self._last_in_batch:
             self._previous_context_id = self._previous_valid_batch_c_id
 
@@ -268,7 +272,7 @@ class SerialScheduler(Scheduler):
             self._scheduled_transactions.append(txn_info)
             return txn_info
 
-    def unschedule_incomplete_batches(self):
+    def unschedule_incomplete_batches(self) -> None:
         inprogress_batch_id = None
         with self._condition:
             # remove the in-progress transaction's batch
@@ -314,12 +318,12 @@ class SerialScheduler(Scheduler):
             LOGGER.debug('Removed %s incomplete batches from the schedule',
                          len(incomplete_batches))
 
-    def finalize(self):
+    def finalize(self) -> None:
         with self._condition:
             self._final = True
             self._condition.notify_all()
 
-    def _compute_merkle_root(self, required_state_root):
+    def _compute_merkle_root(self, required_state_root: None) -> Optional[str]:
         """Computes the merkle root of the state changes in the context
         corresponding with _last_valid_batch_c_id as applied to
         _previous_state_hash.
@@ -349,7 +353,7 @@ class SerialScheduler(Scheduler):
                              persist=True, clean_up=True)
         return state_hash
 
-    def _calculate_state_root_if_not_already_done(self):
+    def _calculate_state_root_if_not_already_done(self) -> None:
         if not self._already_calculated:
             if not self._last_in_batch:
                 return
@@ -367,7 +371,7 @@ class SerialScheduler(Scheduler):
                     # found the last valid batch, so break out
                     break
 
-    def _calculate_state_root_if_required(self, batch_id):
+    def _calculate_state_root_if_required(self, batch_id: str) -> Optional[str]:
         required_state_hash = self._required_state_hashes.get(
             batch_id)
         state_hash = None
@@ -376,11 +380,11 @@ class SerialScheduler(Scheduler):
             self._already_calculated = True
         return state_hash
 
-    def _complete(self):
+    def _complete(self) -> bool:
         return self._final and \
             len(self._txn_results) == len(self._txn_to_batch)
 
-    def complete(self, block):
+    def complete(self, block: bool):
         with self._condition:
             if not self._final:
                 return False
@@ -393,7 +397,7 @@ class SerialScheduler(Scheduler):
                 return True
             return False
 
-    def cancel(self):
+    def cancel(self) -> None:
         with self._condition:
             if not self._cancelled and not self._final \
                     and self._previous_context_id:
@@ -410,7 +414,7 @@ class SerialScheduler(Scheduler):
             return self._cancelled
 
 
-def _first(iterator):
+def _first(iterator: Iterator):
     try:
         return next(iterator)
     except StopIteration:

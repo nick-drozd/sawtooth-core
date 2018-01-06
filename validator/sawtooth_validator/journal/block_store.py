@@ -22,6 +22,10 @@ from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
 
+from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.transaction_pb2 import Transaction
+from typing import Any, Callable, Dict, Iterator, List, Optional, Union
 class BlockStore(MutableMapping):
     """
     A dict like interface wrapper around the block store to guarantee,
@@ -29,23 +33,23 @@ class BlockStore(MutableMapping):
     retrieved.
     """
 
-    def __init__(self, block_db):
+    def __init__(self, block_db: DictDatabase) -> None:
         self._block_store = block_db
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         if key != value.identifier:
             raise KeyError(
                 "Invalid key to store block under: {} expected {}".format(
                     key, value.identifier))
         self._block_store.put(key, value)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> BlockWrapper:
         return self._get_block(key)
 
     def __delitem__(self, key):
         del self._block_store[key]
 
-    def __contains__(self, x):
+    def __contains__(self, x) -> bool:
         return x in self._block_store
 
     def __iter__(self):
@@ -63,7 +67,7 @@ class BlockStore(MutableMapping):
         return ','.join(out)
 
     @staticmethod
-    def create_index_configuration():
+    def create_index_configuration() -> Dict[str, Callable]:
         return {
             'batch': BlockStore._batch_index_keys,
             'transaction': BlockStore._transaction_index_keys,
@@ -102,7 +106,7 @@ class BlockStore(MutableMapping):
         """
         return blkw.block.SerializeToString()
 
-    def update_chain(self, new_chain, old_chain=None):
+    def update_chain(self, new_chain: List[BlockWrapper], old_chain: Optional[List[BlockWrapper]] = None) -> None:
         """
         Set the current chain head, does not validate that the block
         store is in a valid state, ie that all the head block and all
@@ -148,7 +152,7 @@ class BlockStore(MutableMapping):
         """
         return self._block_store
 
-    def get_predecessor_iter(self, starting_block=None):
+    def get_predecessor_iter(self, starting_block: Optional[BlockWrapper] = None) -> Iterator[Any]:
         """Returns an iterator that traverses block via its predecesssors.
 
         Args:
@@ -160,8 +164,8 @@ class BlockStore(MutableMapping):
         """
         return self.get_block_iter(start_block=starting_block)
 
-    def get_block_iter(self, start_block=None, start_block_num=None,
-                       reverse=True):
+    def get_block_iter(self, start_block: Optional[BlockWrapper] = None, start_block_num: Optional[str] = None,
+                       reverse: bool = True) -> Iterator[BlockWrapper]:
         """Returns an iterator that traverses blocks in block number order.
 
         Args:
@@ -203,13 +207,13 @@ class BlockStore(MutableMapping):
                 yield block
 
     @staticmethod
-    def _batch_index_keys(block):
+    def _batch_index_keys(block: BlockWrapper) -> List[bytes]:
         blkw = BlockWrapper.wrap(block)
         return [batch.header_signature.encode()
                 for batch in blkw.batches]
 
     @staticmethod
-    def _transaction_index_keys(block):
+    def _transaction_index_keys(block: BlockWrapper) -> List[bytes]:
         blkw = BlockWrapper.wrap(block)
         keys = []
         for batch in blkw.batches:
@@ -218,13 +222,13 @@ class BlockStore(MutableMapping):
         return keys
 
     @staticmethod
-    def _block_num_index_keys(block):
+    def _block_num_index_keys(block: BlockWrapper) -> List[bytes]:
         blkw = BlockWrapper.wrap(block)
         # Format the number to a 64bit hex value, for natural ordering
         return [BlockStore.block_num_to_hex(blkw.block_num).encode()]
 
     @staticmethod
-    def block_num_to_hex(block_num):
+    def block_num_to_hex(block_num: int) -> str:
         """Converts a block number to a hex string.
         This is used for proper index ordering and lookup.
 
@@ -236,7 +240,7 @@ class BlockStore(MutableMapping):
         """
         return "{0:#0{1}x}".format(block_num, 18)
 
-    def _get_block(self, key):
+    def _get_block(self, key: str) -> BlockWrapper:
         value = self._block_store.get(key)
         if value is None:
             raise KeyError('Block "{}" not found in store'.format(key))
@@ -256,7 +260,7 @@ class BlockStore(MutableMapping):
         """
         return [block for _, block in self._block_store.get_multi(block_ids)]
 
-    def get_block_by_transaction_id(self, txn_id):
+    def get_block_by_transaction_id(self, txn_id: str) -> BlockWrapper:
         """Returns the block that contains the given transaction id.
 
         Args:
@@ -295,7 +299,7 @@ class BlockStore(MutableMapping):
 
         return block
 
-    def has_transaction(self, txn_id):
+    def has_transaction(self, txn_id: str) -> bool:
         """Returns True if the transaction is contained in a block in the
         block store.
 
@@ -307,7 +311,7 @@ class BlockStore(MutableMapping):
         """
         return self._block_store.contains_key(txn_id, index='transaction')
 
-    def get_block_by_batch_id(self, batch_id):
+    def get_block_by_batch_id(self, batch_id: str) -> BlockWrapper:
         """Returns the block that contains the given batch id.
 
         Args:
@@ -339,7 +343,7 @@ class BlockStore(MutableMapping):
         """
         return self._block_store.get_multi(batch_ids, index='batch')
 
-    def has_batch(self, batch_id):
+    def has_batch(self, batch_id: str) -> bool:
         """Returns True if the batch is contained in a block in the
         block store.
 
@@ -351,7 +355,7 @@ class BlockStore(MutableMapping):
         """
         return self._block_store.contains_key(batch_id, index='batch')
 
-    def get_batch_by_transaction(self, transaction_id):
+    def get_batch_by_transaction(self, transaction_id: str) -> Batch:
         """
         Check to see if the requested transaction_id is in the current chain.
         If so, find the batch that has the transaction referenced by the
@@ -373,7 +377,7 @@ class BlockStore(MutableMapping):
                     return batch
         return None
 
-    def get_batch(self, batch_id):
+    def get_batch(self, batch_id: str) -> Batch:
         """
         Check to see if the requested batch_id is in the current chain. If so,
         find the batch with the batch_id and return it. This is done by
@@ -404,7 +408,7 @@ class BlockStore(MutableMapping):
         ]
 
     @staticmethod
-    def _get_batch_from_block(block, batch_id):
+    def _get_batch_from_block(block: BlockWrapper, batch_id: str) -> Batch:
         for batch in block.batches:
             if batch.header_signature == batch_id:
                 return batch
@@ -413,7 +417,7 @@ class BlockStore(MutableMapping):
             'Batch {} not in block {}: possible index mismatch'.format(
                 batch_id, block.identifier))
 
-    def get_transaction(self, transaction_id):
+    def get_transaction(self, transaction_id: str) -> Transaction:
         """Returns a Transaction object from the block store by its id.
 
         Params:
@@ -438,7 +442,7 @@ class BlockStore(MutableMapping):
         ]
 
     @staticmethod
-    def _get_txn_from_block(block, txn_id):
+    def _get_txn_from_block(block: BlockWrapper, txn_id: str) -> Transaction:
         for batch in block.batches:
             for txn in batch.transactions:
                 if txn.header_signature == txn_id:

@@ -1,0 +1,23 @@
+from sawtooth_validator.journal.block_store import BlockStore
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from typing import (
+    Dict,
+    List,
+    Union,
+)
+
+
+class BlockCache:
+    def __delitem__(self, block_id: str) -> None: ...
+    def __getitem__(self, block_id: str): ...
+    def __init__(
+        self,
+        block_store: Optional[Union[BlockStore, Dict[str, BlockWrapper]]] = None,
+        keep_time: int = 30,
+        purge_frequency: int = 30
+    ) -> None: ...
+    def __setitem__(self, block_id: str, block: BlockWrapper) -> None: ...
+    def _purge_expired(self) -> None: ...
+    def add_chain(self, chain: List[BlockWrapper]) -> None: ...
+    @property
+    def block_store(self) -> BlockStore: ...

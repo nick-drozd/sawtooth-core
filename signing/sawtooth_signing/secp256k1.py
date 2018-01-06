@@ -32,24 +32,24 @@ __PK__ = secp256k1.PublicKey(ctx=__CTX__)  # Cache object to use as factory
 
 
 class Secp256k1PrivateKey(PrivateKey):
-    def __init__(self, secp256k1_private_key):
+    def __init__(self, secp256k1_private_key: secp256k1.PrivateKey) -> None:
         self._private_key = secp256k1_private_key
 
-    def get_algorithm_name(self):
+    def get_algorithm_name(self) -> str:
         return "secp256k1"
 
-    def as_hex(self):
+    def as_hex(self) -> str:
         return binascii.hexlify(self.as_bytes()).decode()
 
-    def as_bytes(self):
+    def as_bytes(self) -> bytes:
         return bytes(self._private_key.private_key)
 
     @property
-    def secp256k1_private_key(self):
+    def secp256k1_private_key(self) -> secp256k1.PrivateKey:
         return self._private_key
 
     @staticmethod
-    def from_wif(wif):
+    def from_wif(wif: str) -> Secp256k1PrivateKey:
         """Decodes a PrivateKey from a wif-encoded string
         """
         try:
@@ -61,7 +61,7 @@ class Secp256k1PrivateKey(PrivateKey):
             raise ParseError('Unable to parse wif key: {}'.format(e))
 
     @staticmethod
-    def from_hex(hex_str):
+    def from_hex(hex_str: str) -> Secp256k1PrivateKey:
         try:
             priv = binascii.unhexlify(hex_str)
             return Secp256k1PrivateKey(secp256k1.PrivateKey(priv, ctx=__CTX__))
@@ -74,17 +74,17 @@ class Secp256k1PrivateKey(PrivateKey):
 
 
 class Secp256k1PublicKey(PublicKey):
-    def __init__(self, secp256k1_public_key):
+    def __init__(self, secp256k1_public_key: secp256k1.PublicKey) -> None:
         self._public_key = secp256k1_public_key
 
     @property
-    def secp256k1_public_key(self):
+    def secp256k1_public_key(self) -> secp256k1.PublicKey:
         return self._public_key
 
-    def get_algorithm_name(self):
+    def get_algorithm_name(self) -> str:
         return "secp256k1"
 
-    def as_hex(self):
+    def as_hex(self) -> str:
         return binascii.hexlify(self.as_bytes()).decode()
 
     def as_bytes(self):
@@ -93,7 +93,7 @@ class Secp256k1PublicKey(PublicKey):
             return self._public_key.serialize()
 
     @staticmethod
-    def from_hex(hex_str):
+    def from_hex(hex_str: str) -> Secp256k1PublicKey:
         try:
             public_key = __PK__.deserialize(binascii.unhexlify(hex_str))
 
@@ -104,13 +104,13 @@ class Secp256k1PublicKey(PublicKey):
 
 
 class Secp256k1Context(Context):
-    def __init__(self):
+    def __init__(self) -> None:
         self._ctx = __CTX__
 
-    def get_algorithm_name(self):
+    def get_algorithm_name(self) -> str:
         return "secp256k1"
 
-    def sign(self, message, private_key):
+    def sign(self, message: bytes, private_key: Secp256k1PrivateKey) -> str:
         try:
             signature = private_key.secp256k1_private_key.ecdsa_sign(message)
             signature = private_key.secp256k1_private_key \
@@ -120,7 +120,7 @@ class Secp256k1Context(Context):
         except Exception as e:
             raise SigningError('Unable to sign message: {}'.format(str(e)))
 
-    def verify(self, signature, message, public_key):
+    def verify(self, signature: str, message: bytes, public_key: Secp256k1PublicKey) -> bool:
         try:
             sig_bytes = bytes.fromhex(signature)
 
@@ -134,5 +134,5 @@ class Secp256k1Context(Context):
     def new_random_private_key(self):
         return Secp256k1PrivateKey.new_random()
 
-    def get_public_key(self, private_key):
+    def get_public_key(self, private_key: Secp256k1PrivateKey) -> Secp256k1PublicKey:
         return Secp256k1PublicKey(private_key.secp256k1_private_key.pubkey)

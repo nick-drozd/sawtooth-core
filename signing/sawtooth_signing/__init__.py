@@ -19,18 +19,19 @@ from sawtooth_signing.core import SigningError
 from sawtooth_signing.secp256k1 import Secp256k1Context
 
 
+from sawtooth_signing.secp256k1 import Secp256k1Context, Secp256k1PrivateKey
 class Signer:
     """A convenient wrapper of Context and PrivateKey
     """
 
-    def __init__(self, context, private_key):
+    def __init__(self, context: Secp256k1Context, private_key: Secp256k1PrivateKey) -> None:
         """
         """
         self._context = context
         self._private_key = private_key
         self._public_key = None
 
-    def sign(self, message):
+    def sign(self, message: bytes) -> str:
         """Signs the given message
 
         Args:
@@ -57,16 +58,16 @@ class CryptoFactory:
     """Factory for generating Signers.
     """
 
-    def __init__(self, context):
+    def __init__(self, context: Secp256k1Context) -> None:
         self._context = context
 
     @property
-    def context(self):
+    def context(self) -> Secp256k1Context:
         """Return the context that backs this factory instance
         """
         return self._context
 
-    def new_signer(self, private_key):
+    def new_signer(self, private_key: Secp256k1PrivateKey) -> Signer:
         """Create a new signer for the given private key.
 
         Args:
@@ -78,7 +79,7 @@ class CryptoFactory:
         return Signer(self._context, private_key)
 
 
-def create_context(algorithm_name):
+def create_context(algorithm_name: str) -> Secp256k1Context:
     """Returns an algorithm instance by name.
 
     Args:

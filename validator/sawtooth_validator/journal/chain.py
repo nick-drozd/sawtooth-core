@@ -40,6 +40,14 @@ from sawtooth_validator.metrics.wrappers import GaugeWrapper
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
 
+from google.protobuf.internal.containers import RepeatedCompositeFieldContainer
+from queue import Queue
+from sawtooth_signing import Signer
+from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.transaction_pb2 import Transaction, TransactionHeader
+from test_journal.mock import MockBlockSender, MockChainIdManager, MockPermissionVerifier, MockStateViewFactory, MockTransactionExecutor, SynchronousExecutor
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union
 LOGGER = logging.getLogger(__name__)
 
 
@@ -65,7 +73,7 @@ class InvalidBatch(Exception):
 
 
 # pylint: disable=stop-iteration-return
-def look_ahead(iterable):
+def look_ahead(iterable: RepeatedCompositeFieldContainer) -> Iterator[Tuple[Batch, bool]]:
     """Pass through all values from the given iterable, augmented by the
     information if there are more values to come after the current one
     (True), or if it is the last value (False).
@@ -153,18 +161,18 @@ class BlockValidator(object):
         self._validation_rule_enforcer = \
             ValidationRuleEnforcer(SettingsViewFactory(state_view_factory))
 
-    def _get_previous_block_root_state_hash(self, blkw):
+    def _get_previous_block_root_state_hash(self, blkw: BlockWrapper) -> str:
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
             return INIT_ROOT_KEY
 
         return self._block_cache[blkw.previous_block_id].state_root_hash
 
-    def _txn_header(self, txn):
+    def _txn_header(self, txn: Transaction) -> TransactionHeader:
         txn_hdr = TransactionHeader()
         txn_hdr.ParseFromString(txn.header)
         return txn_hdr
 
-    def _verify_batch_transactions(self, batch):
+    def _verify_batch_transactions(self, batch: Batch) -> None:
         """Verify that all transactions in are unique and that all
         transactions dependencies in this batch have been satisfied, ie
         already committed by this block or prior block in the chain.
@@ -193,7 +201,7 @@ class BlockValidator(object):
                     raise InvalidBatch()
             self._chain_commit_state.add_txn(txn.header_signature)
 
-    def _verify_block_batches(self, blkw):
+    def _verify_block_batches(self, blkw: BlockWrapper) -> bool:
         if blkw.block.batches:
             prev_state = self._get_previous_block_root_state_hash(blkw)
             scheduler = self._executor.create_scheduler(
@@ -249,7 +257,7 @@ class BlockValidator(object):
                 return False
         return True
 
-    def _validate_permissions(self, blkw):
+    def _validate_permissions(self, blkw: BlockWrapper) -> bool:
         """
         Validate that all of the batch signers and transaction signer for the
         batches in the block are permitted by the transactor permissioning
@@ -270,7 +278,7 @@ class BlockValidator(object):
                     return False
         return True
 
-    def _validate_on_chain_rules(self, blkw):
+    def _validate_on_chain_rules(self, blkw: BlockWrapper) -> bool:
         """
         Validate that the block conforms to all validation rules stored in
         state. If the block breaks any of the stored rules, the block is
@@ -286,7 +294,7 @@ class BlockValidator(object):
             return self._validation_rule_enforcer.validate(blkw, state_root)
         return True
 
-    def validate_block(self, blkw):
+    def validate_block(self, blkw: BlockWrapper) -> bool:
         # pylint: disable=broad-except
         try:
             if blkw.status == BlockStatus.Valid:
@@ -334,7 +342,7 @@ class BlockValidator(object):
                 "Unhandled exception BlockPublisher.validate_block()")
             return False
 
-    def _find_common_height(self, new_chain, cur_chain):
+    def _find_common_height(self, new_chain: List[Any], cur_chain: List[Any]) -> Tuple[BlockWrapper, BlockWrapper]:
         """
         Walk back on the longest chain until we find a predecessor that is the
         same height as the other chain.
@@ -375,7 +383,7 @@ class BlockValidator(object):
                 cur_blkw = self._block_cache[cur_blkw.previous_block_id]
         return (new_blkw, cur_blkw)
 
-    def _find_common_ancestor(self, new_blkw, cur_blkw, new_chain, cur_chain):
+    def _find_common_ancestor(self, new_blkw: BlockWrapper, cur_blkw: BlockWrapper, new_chain: List[BlockWrapper], cur_chain: List[BlockWrapper]) -> None:
         """ Finds a common ancestor of the two chains.
         """
         while cur_blkw.identifier != new_blkw.identifier:
@@ -403,7 +411,7 @@ class BlockValidator(object):
             cur_chain.append(cur_blkw)
             cur_blkw = self._block_cache[cur_blkw.previous_block_id]
 
-    def _test_commit_new_chain(self):
+    def _test_commit_new_chain(self) -> bool:
         """ Compare the two chains and determine which should be the head.
         """
         public_key = self._identity_signer.get_public_key().as_hex()
@@ -417,7 +425,7 @@ class BlockValidator(object):
 
         return fork_resolver.compare_forks(self._chain_head, self._new_block)
 
-    def _compute_batch_change(self, new_chain, cur_chain):
+    def _compute_batch_change(self, new_chain: List[BlockWrapper], cur_chain: List[BlockWrapper]) -> Union[Tuple[List[Batch], List[Batch]], Tuple[List[Batch], List[Any]]]:
         """
         Compute the batch change sets.
         """
@@ -433,7 +441,7 @@ class BlockValidator(object):
 
         return (committed_batches, uncommitted_batches)
 
-    def run(self):
+    def run(self) -> None:
         """
         Main entry for Block Validation, Take a given candidate block
         and decide if it is valid then if it is valid determine if it should
@@ -541,7 +549,7 @@ class ChainObserver(object, metaclass=ABCMeta):
 
 
 class _ChainThread(InstrumentedThread):
-    def __init__(self, chain_controller, block_queue, block_cache):
+    def __init__(self, chain_controller: ChainController, block_queue: Queue, block_cache: BlockCache) -> None:
         super().__init__(name='_ChainThread')
         self._chain_controller = chain_controller
         self._block_queue = block_queue
@@ -564,7 +572,7 @@ class _ChainThread(InstrumentedThread):
         except Exception:
             LOGGER.exception("ChainController thread exited with error.")
 
-    def stop(self):
+    def stop(self) -> None:
         self._exit = True
 
 
@@ -575,21 +583,21 @@ class ChainController(object):
     """
 
     def __init__(self,
-                 block_cache,
-                 block_sender,
-                 state_view_factory,
-                 transaction_executor,
-                 chain_head_lock,
-                 on_chain_updated,
-                 squash_handler,
-                 chain_id_manager,
-                 identity_signer,
-                 data_dir,
-                 config_dir,
-                 permission_verifier,
-                 chain_observers,
-                 thread_pool=None,
-                 metrics_registry=None):
+                 block_cache: BlockCache,
+                 block_sender: MockBlockSender,
+                 state_view_factory: MockStateViewFactory,
+                 transaction_executor: MockTransactionExecutor,
+                 chain_head_lock: RLock,
+                 on_chain_updated: Callable,
+                 squash_handler: None,
+                 chain_id_manager: Optional[MockChainIdManager],
+                 identity_signer: Signer,
+                 data_dir: None,
+                 config_dir: None,
+                 permission_verifier: MockPermissionVerifier,
+                 chain_observers: List[Any],
+                 thread_pool: Optional[SynchronousExecutor] = None,
+                 metrics_registry: None = None) -> None:
         """Initialize the ChainController
         Args:
             block_cache: The cache of all recent blocks and the processing
@@ -667,7 +675,7 @@ class ChainController(object):
         # Only run this after all member variables have been bound
         self._set_chain_head_from_block_store()
 
-    def _set_chain_head_from_block_store(self):
+    def _set_chain_head_from_block_store(self) -> None:
         try:
             self._chain_head = self._block_store.chain_head
             if self._chain_head is not None:
@@ -681,7 +689,7 @@ class ChainController(object):
                 " determined")
             raise
 
-    def start(self):
+    def start(self) -> None:
         self._set_chain_head_from_block_store()
         self._notify_on_chain_updated(self._chain_head)
 
@@ -691,7 +699,7 @@ class ChainController(object):
             block_cache=self._block_cache)
         self._chain_thread.start()
 
-    def stop(self):
+    def stop(self) -> None:
         if self._chain_thread is not None:
             self._chain_thread.stop()
             self._chain_thread = None
@@ -699,7 +707,7 @@ class ChainController(object):
         if self._thread_pool is not None:
             self._thread_pool.shutdown(wait=True)
 
-    def queue_block(self, block):
+    def queue_block(self, block: BlockWrapper) -> None:
         """
         New block has been received, queue it with the chain controller
         for processing.
@@ -707,10 +715,10 @@ class ChainController(object):
         self._block_queue.put(block)
 
     @property
-    def chain_head(self):
+    def chain_head(self) -> Optional[BlockWrapper]:
         return self._chain_head
 
-    def _submit_blocks_for_verification(self, blocks):
+    def _submit_blocks_for_verification(self, blocks: List[BlockWrapper]) -> None:
         for blkw in blocks:
             state_view = BlockWrapper.state_view_for_block(
                 self.chain_head,
@@ -735,7 +743,7 @@ class ChainController(object):
             self._blocks_processing[blkw.block.header_signature] = validator
             self._thread_pool.submit(validator.run)
 
-    def on_block_validated(self, commit_new_block, result):
+    def on_block_validated(self, commit_new_block: bool, result: Dict[str, Union[BlockWrapper, List[BlockWrapper], List[Batch], int]]) -> None:
         """Message back from the block validator, that the validation is
         complete
         Args:
@@ -872,7 +880,7 @@ class ChainController(object):
             LOGGER.exception(
                 "Unhandled exception in ChainController.on_block_validated()")
 
-    def on_block_received(self, block):
+    def on_block_received(self, block: BlockWrapper) -> None:
         try:
             with self._lock:
                 if self.has_block(block.header_signature):
@@ -915,7 +923,7 @@ class ChainController(object):
             LOGGER.exception(
                 "Unhandled exception in ChainController.on_block_received()")
 
-    def has_block(self, block_id):
+    def has_block(self, block_id: str):
         with self._lock:
             if block_id in self._block_cache:
                 return True
@@ -928,7 +936,7 @@ class ChainController(object):
 
             return False
 
-    def _set_genesis(self, block):
+    def _set_genesis(self, block: BlockWrapper) -> None:
         # This is used by a non-genesis journal when it has received the
         # genesis block from the genesis validator
         if block.previous_block_id == NULL_BLOCK_IDENTIFIER:
@@ -973,7 +981,7 @@ class ChainController(object):
             LOGGER.warning("Cannot set initial chain head, this is not a "
                            "genesis block: %s", block)
 
-    def _make_receipts(self, results):
+    def _make_receipts(self, results: List[Any]) -> List[Any]:
         receipts = []
         for result in results:
             receipt = TransactionReceipt()

@@ -20,6 +20,9 @@ import time
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 
+from sawtooth_validator.journal.block_store import BlockStore
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from typing import Dict, List, Union, Optional
 class BlockCache(MutableMapping):
     """
     A dict like interface to access blocks. Stores BlockState objects.
@@ -47,24 +50,24 @@ class BlockCache(MutableMapping):
                 self.count -= 1
             self.touch()
 
-    def __init__(self, block_store=None, keep_time=30, purge_frequency=30):
+    def __init__(self, block_store: Optional[Union[BlockStore, Dict[str, BlockWrapper]]] = None, keep_time: int = 30, purge_frequency: int = 30) -> None:
         super(BlockCache, self).__init__()
         self._lock = RLock()
-        self._cache = {}
+        self._cache: Dict = {}
         self._keep_time = keep_time
         self._purge_frequency = purge_frequency
         self._next_purge_time = time.time() + purge_frequency
         self._block_store = block_store if block_store is not None else {}
 
     @property
-    def block_store(self):
+    def block_store(self) -> Optional[Union[BlockStore, Dict[str, BlockWrapper]]]:
         """
         Return the wrapped blockStore object, expected to be of
         type BlockStoreAdapter.
         """
         return self._block_store
 
-    def __getitem__(self, block_id):
+    def __getitem__(self, block_id: str):
         with self._lock:
             try:
                 value = self._cache[block_id]
@@ -77,7 +80,7 @@ class BlockCache(MutableMapping):
                     return block
                 raise
 
-    def __setitem__(self, block_id, block):
+    def __setitem__(self, block_id: str, block: BlockWrapper) -> None:
         with self._lock:
             self._cache[block_id] = self.CachedValue(block)
             if block_id != NULL_BLOCK_IDENTIFIER and \
@@ -88,7 +91,7 @@ class BlockCache(MutableMapping):
                 self._purge_expired()
                 self._next_purge_time = time.time() + self._purge_frequency
 
-    def __delitem__(self, block_id):
+    def __delitem__(self, block_id: str) -> None:
         with self._lock:
             block = self._cache[block_id].value
             if block.previous_block_id in self._cache:
@@ -110,7 +113,7 @@ class BlockCache(MutableMapping):
                 out.append(str(v.value))
             return ','.join(out)
 
-    def add_chain(self, chain):
+    def add_chain(self, chain: List[BlockWrapper]) -> None:
         """
         Add block in a chain in the correct order. Also add all of the blocks
         to the cache before doing a purge.
@@ -141,7 +144,7 @@ class BlockCache(MutableMapping):
         with self._lock:
             return self._purge_frequency
 
-    def _purge_expired(self):
+    def _purge_expired(self) -> None:
         """
         Remove all expired entries from the cache that do not have a reference
         count.

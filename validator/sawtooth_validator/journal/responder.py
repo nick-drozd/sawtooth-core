@@ -25,6 +25,11 @@ from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.protobuf import batch_pb2
 
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.gossip.gossip import Gossip
+from sawtooth_validator.journal.completer import Completer
+from typing import Optional, List
 LOGGER = logging.getLogger(__name__)
 
 CACHE_KEEP_TIME = 300
@@ -32,15 +37,15 @@ CACHE_KEEP_TIME = 300
 
 class Responder(object):
     def __init__(self,
-                 completer,
-                 cache_keep_time=300,
-                 cache_purge_frequency=30):
+                 completer: Completer,
+                 cache_keep_time: int = 300,
+                 cache_purge_frequency: int = 30) -> None:
         self.completer = completer
         self.pending_requests = TimedCache(cache_keep_time,
                                            cache_purge_frequency)
         self._lock = RLock()
 
-    def check_for_block(self, block_id):
+    def check_for_block(self, block_id: str) -> Optional[BlockWrapper]:
         # Ask Completer
         if block_id == "HEAD":
             block = self.completer.get_chain_head()
@@ -48,21 +53,21 @@ class Responder(object):
             block = self.completer.get_block(block_id)
         return block
 
-    def check_for_batch(self, batch_id):
+    def check_for_batch(self, batch_id: str) -> Optional[Batch]:
         batch = self.completer.get_batch(batch_id)
         return batch
 
-    def check_for_batch_by_transaction(self, transaction_id):
+    def check_for_batch_by_transaction(self, transaction_id: str) -> Optional[Batch]:
         batch = self.completer.get_batch_by_transaction(transaction_id)
         return batch
 
-    def already_requested(self, requested_id):
+    def already_requested(self, requested_id: str):
         with self._lock:
             if requested_id in self.pending_requests:
                 return True
             return False
 
-    def add_request(self, requested_id, connection_id):
+    def add_request(self, requested_id: str, connection_id: str) -> None:
         with self._lock:
             if requested_id in self.pending_requests:
                 if connection_id not in self.pending_requests[requested_id]:
@@ -71,23 +76,23 @@ class Responder(object):
             else:
                 self.pending_requests[requested_id] = [connection_id]
 
-    def get_request(self, requested_id):
+    def get_request(self, requested_id: str):
         with self._lock:
             return self.pending_requests.get(requested_id)
 
-    def remove_request(self, requested_id):
+    def remove_request(self, requested_id: str) -> None:
         with self._lock:
             if requested_id in self.pending_requests:
                 del self.pending_requests[requested_id]
 
 
 class BlockResponderHandler(Handler):
-    def __init__(self, responder, gossip):
+    def __init__(self, responder: Responder, gossip: Gossip) -> None:
         self._responder = responder
         self._gossip = gossip
         self._seen_requests = TimedCache(CACHE_KEEP_TIME)
 
-    def handle(self, connection_id, message_content):
+    def handle(self, connection_id: str, message_content: bytes) -> HandlerResult:
         block_request_message = network_pb2.GossipBlockRequest()
         block_request_message.ParseFromString(message_content)
         if block_request_message.nonce in self._seen_requests:
@@ -138,11 +143,11 @@ class BlockResponderHandler(Handler):
 
 
 class ResponderBlockResponseHandler(Handler):
-    def __init__(self, responder, gossip):
+    def __init__(self, responder: Responder, gossip: Gossip) -> None:
         self._responder = responder
         self._gossip = gossip
 
-    def handle(self, connection_id, message_content):
+    def handle(self, connection_id: str, message_content: bytes) -> HandlerResult:
         block_response = network_pb2.GossipBlockResponse()
         block_response.ParseFromString(message_content)
         block = block_pb2.Block()
@@ -172,12 +177,12 @@ class ResponderBlockResponseHandler(Handler):
 
 
 class BatchByBatchIdResponderHandler(Handler):
-    def __init__(self, responder, gossip):
+    def __init__(self, responder: Responder, gossip: Gossip) -> None:
         self._responder = responder
         self._gossip = gossip
         self._seen_requests = TimedCache(CACHE_KEEP_TIME)
 
-    def handle(self, connection_id, message_content):
+    def handle(self, connection_id: str, message_content: bytes) -> HandlerResult:
         batch_request_message = network_pb2.GossipBatchByBatchIdRequest()
         batch_request_message.ParseFromString(message_content)
         if batch_request_message.nonce in self._seen_requests:
@@ -228,12 +233,12 @@ class BatchByBatchIdResponderHandler(Handler):
 
 
 class BatchByTransactionIdResponderHandler(Handler):
-    def __init__(self, responder, gossip):
+    def __init__(self, responder: Responder, gossip: Gossip) -> None:
         self._responder = responder
         self._gossip = gossip
         self._seen_requests = TimedCache(CACHE_KEEP_TIME)
 
-    def handle(self, connection_id, message_content):
+    def handle(self, connection_id: str, message_content: bytes) -> HandlerResult:
         batch_request_message = network_pb2.GossipBatchByTransactionIdRequest()
         batch_request_message.ParseFromString(message_content)
         if batch_request_message.nonce in self._seen_requests:
@@ -243,7 +248,7 @@ class BatchByTransactionIdResponderHandler(Handler):
             return HandlerResult(HandlerStatus.DROP)
 
         batch = None
-        batches = []
+        batches: List[Batch] = []
         unfound_txn_ids = []
         not_requested = []
         for txn_id in batch_request_message.ids:
@@ -327,11 +332,11 @@ class BatchByTransactionIdResponderHandler(Handler):
 
 
 class ResponderBatchResponseHandler(Handler):
-    def __init__(self, responder, gossip):
+    def __init__(self, responder: Responder, gossip: Gossip) -> None:
         self._responder = responder
         self._gossip = gossip
 
-    def handle(self, connection_id, message_content):
+    def handle(self, connection_id: str, message_content: bytes) -> HandlerResult:
         batch_response = network_pb2.GossipBatchResponse()
         batch_response.ParseFromString(message_content)
         batch = batch_pb2.Batch()
