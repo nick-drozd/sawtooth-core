@@ -164,47 +164,45 @@ class TestMessageValidation(unittest.TestCase):
     def test_valid_transaction(self):
         txn_list = self._create_transactions(1)
         txn = txn_list[0]
-        valid = verifier.is_valid_transaction(txn)
-        self.assertTrue(valid)
+        verifier.validate_transaction(txn)
 
     def test_invalid_transaction(self):
         # add invalid flag to _create transaction
         txn_list = self._create_transactions(1, valid_signature=False)
         txn = txn_list[0]
-        valid = verifier.is_valid_transaction(txn)
-        self.assertFalse(valid)
+        with self.assertRaises(verifier.ValidationError):
+            verifier.validate_transaction(txn)
 
     def test_unmatched_payload_transaction(self):
         # add invalid flag to _create transaction
         txn_list = self._create_transactions(1, matched_payload=False)
         txn = txn_list[0]
-        valid = verifier.is_valid_transaction(txn)
-        self.assertFalse(valid)
+        with self.assertRaises(verifier.ValidationError):
+            verifier.validate_transaction(txn)
 
     def test_valid_batch(self):
         batch_list = self._create_batches(1, 10)
         batch = batch_list[0]
-        valid = verifier.is_valid_batch(batch)
-        self.assertTrue(valid)
+        verifier.validate_batch(batch)
 
     def test_invalid_batch(self):
         # add invalid flag to create_batches
         batch_list = self._create_batches(1, 1, valid_batch=False)
         batch = batch_list[0]
-        valid = verifier.is_valid_batch(batch)
-        self.assertFalse(valid)
+        with self.assertRaises(verifier.ValidationError):
+            verifier.validate_batch(batch)
 
         # create an invalid txn in the batch
         batch_list = self._create_batches(1, 1, valid_txn=False)
         batch = batch_list[0]
-        valid = verifier.is_valid_batch(batch)
-        self.assertFalse(valid)
+        with self.assertRaises(verifier.ValidationError):
+            verifier.validate_batch(batch)
 
         # create an invalid txn with bad batcher
         batch_list = self._create_batches(1, 1, valid_batcher=False)
         batch = batch_list[0]
-        valid = verifier.is_valid_batch(batch)
-        self.assertFalse(valid)
+        with self.assertRaises(verifier.ValidationError):
+            verifier.validate_batch(batch)
 
     def test_invalid_batch_structure(self):
         batch_list = self._create_batches(1, 2, valid_structure=False)
@@ -215,16 +213,15 @@ class TestMessageValidation(unittest.TestCase):
     def test_valid_block(self):
         block_list = self._create_blocks(1, 1)
         block = block_list[0]
-        valid = verifier.is_valid_block(block)
-        self.assertTrue(valid)
+        verifier.validate_block(block)
 
     def test_invalid_block(self):
         block_list = self._create_blocks(1, 1, valid_batch=False)
         block = block_list[0]
-        valid = verifier.is_valid_block(block)
-        self.assertFalse(valid)
+        with self.assertRaises(verifier.ValidationError):
+            verifier.validate_block(block)
 
         block_list = self._create_blocks(1, 1, valid_block=False)
         block = block_list[0]
-        valid = verifier.is_valid_block(block)
-        self.assertFalse(valid)
+        with self.assertRaises(verifier.ValidationError):
+            verifier.validate_block(block)

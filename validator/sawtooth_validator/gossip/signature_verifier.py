@@ -43,81 +43,89 @@ LOGGER = logging.getLogger(__name__)
 COLLECTOR = metrics.get_collector(__name__)
 
 
-def is_valid_block(block):
+class ValidationError(Exception):
+    pass
+
+
+def validate_block(block):
     # validate block signature
     header = BlockHeader()
     header.ParseFromString(block.header)
 
     context = create_context('secp256k1')
     public_key = Secp256k1PublicKey.from_hex(header.signer_public_key)
-    if not context.verify(block.header_signature,
-                          block.header,
-                          public_key):
-        LOGGER.debug("block failed signature validation: %s",
-                     block.header_signature)
-        return False
+
+    if not context.verify(block.header_signature, block.header, public_key):
+        raise ValidationError(
+            'Block {} failed signature validation'.format(
+                block.header_signature))
 
     # validate all batches in block. These are not all batches in the
     # batch_ids stored in the block header, only those sent with the block.
-    if not all(map(is_valid_batch, block.batches)):
-        return False
+    for batch in block.batches:
+        try:
+            validate_batch(batch)
+        except ValidationError as err:
+            raise ValidationError(
+                'Block {} failed validation: {}'.format(
+                    block.header_signature,
+                    err))
 
-    return True
 
-
-def is_valid_batch(batch):
+def validate_batch(batch):
     # validate batch signature
     header = BatchHeader()
     header.ParseFromString(batch.header)
 
     context = create_context('secp256k1')
     public_key = Secp256k1PublicKey.from_hex(header.signer_public_key)
-    if not context.verify(batch.header_signature,
-                          batch.header,
-                          public_key):
-        LOGGER.debug("batch failed signature validation: %s",
-                     batch.header_signature)
-        return False
+
+    if not context.verify(batch.header_signature, batch.header, public_key):
+        raise ValidationError(
+            'Batch {} failed signature validation'.format(
+                batch.header_signature))
 
     # validate all transactions in batch
     for txn in batch.transactions:
-        if not is_valid_transaction(txn):
-            return False
+        validate_transaction(txn)
 
         txn_header = TransactionHeader()
         txn_header.ParseFromString(txn.header)
+
         if txn_header.batcher_public_key != header.signer_public_key:
-            LOGGER.debug("txn batcher public_key does not match signer"
-                         "public_key for batch: %s txn: %s",
-                         batch.header_signature,
-                         txn.header_signature)
-            return False
+            raise ValidationError(
+                'Batcher public key {} for transaction {} does not match '
+                'signer public key {} for batch {}'.format(
+                    txn_header.batcher_public_key,
+                    txn.header_signature,
+                    header.signer_public_key,
+                    batch.header_signature))
 
-    return True
 
-
-def is_valid_transaction(txn):
+def validate_transaction(txn):
     # validate transactions signature
     header = TransactionHeader()
     header.ParseFromString(txn.header)
 
     context = create_context('secp256k1')
     public_key = Secp256k1PublicKey.from_hex(header.signer_public_key)
-    if not context.verify(txn.header_signature,
-                          txn.header,
-                          public_key):
-        LOGGER.debug("transaction signature invalid for txn: %s",
-                     txn.header_signature)
-        return False
+
+    if not context.verify(txn.header_signature, txn.header, public_key):
+        raise ValidationError(
+            'Invalid public key {} for transaction {}'.format(
+                public_key,
+                txn.header_signature))
 
     # verify the payload field matches the header
     txn_payload_sha512 = hashlib.sha512(txn.payload).hexdigest()
-    if txn_payload_sha512 != header.payload_sha512:
-        LOGGER.debug("payload doesn't match payload_sha512 of the header"
-                     "for txn: %s", txn.header_signature)
-        return False
 
-    return True
+    if txn_payload_sha512 != header.payload_sha512:
+        raise ValidationError(
+            'Payload hash {} for transaction {} does not match '
+            'the header payload hash {}'.format(
+                txn_payload_sha512,
+                txn.header_signature,
+                header.payload_sha512))
 
 
 class GossipMessageSignatureVerifier(Handler):
@@ -139,9 +147,10 @@ class GossipMessageSignatureVerifier(Handler):
                 self._block_dropped_count.inc()
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            if not is_valid_block(block):
-                LOGGER.debug("block signature is invalid: %s",
-                             block.header_signature)
+            try:
+                validate_block(block)
+            except ValidationError as e:
+                LOGGER.warning('%s', e)
                 return HandlerResult(status=HandlerStatus.DROP)
 
             self._seen_cache[block.header_signature] = None
@@ -154,9 +163,10 @@ class GossipMessageSignatureVerifier(Handler):
                 self._batch_dropped_count.inc()
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            if not is_valid_batch(batch):
-                LOGGER.debug("batch signature is invalid: %s",
-                             batch.header_signature)
+            try:
+                validate_batch(batch)
+            except ValidationError as e:
+                LOGGER.warning('%s', e)
                 return HandlerResult(status=HandlerStatus.DROP)
 
             self._seen_cache[batch.header_signature] = None
@@ -181,9 +191,10 @@ class GossipBlockResponseSignatureVerifier(Handler):
             self.block_dropped_count.inc()
             return HandlerResult(status=HandlerStatus.DROP)
 
-        if not is_valid_block(block):
-            LOGGER.debug("requested block's signature is invalid: %s",
-                         block.header_signature)
+        try:
+            validate_block(block)
+        except ValidationError as e:
+            LOGGER.warning('%s', e)
             return HandlerResult(status=HandlerStatus.DROP)
 
         self._seen_cache = TimedCache()
@@ -206,9 +217,10 @@ class GossipBatchResponseSignatureVerifier(Handler):
             self._batch_dropped_count.inc()
             return HandlerResult(status=HandlerStatus.DROP)
 
-        if not is_valid_batch(batch):
-            LOGGER.debug("requested batch's signature is invalid: %s",
-                         batch.header_signature)
+        try:
+            validate_batch(batch)
+        except ValidationError as err:
+            LOGGER.warning('%s', err)
             return HandlerResult(status=HandlerStatus.DROP)
 
         self._seen_cache[batch.header_signature] = None
@@ -236,7 +248,11 @@ class BatchListSignatureVerifier(Handler):
                 LOGGER.debug("TRACE %s: %s", batch.header_signature,
                              self.__class__.__name__)
 
-        if not all(map(is_valid_batch, request.batches)):
-            return make_response(response_proto.INVALID_BATCH)
+        for batch in request.batches:
+            try:
+                validate_batch(batch)
+            except ValidationError as err:
+                LOGGER.warning('%s', err)
+                return make_response(response_proto.INVALID_BATCH)
 
         return HandlerResult(status=HandlerStatus.PASS)
