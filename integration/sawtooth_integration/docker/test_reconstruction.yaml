@@ -1,0 +1,71 @@
+version: "2.1"
+
+services:
+
+  test-reconstruction:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 8008
+      - 4004
+    command: "bash -c \"
+      echo 'Restoring block store'
+      && /project/sawtooth-core/adm/target/debug/sawadm blockstore restore bsbu
+      && /project/sawtooth-core/adm/target/debug/sawadm blockstore prune 65ae099e92c5b41117d5c9fe7267eb2a8541f27b06ae06fd320ab6f7fa3be64f6b245f867253c367aac6cdebf473064258c4deb90ec58cf5e9ba39660cd0c02d
+      && /project/sawtooth-core/adm/target/debug/sawadm blockstore stats --extended
+      && ls /var/lib/sawtooth
+      && echo 'Verifying state'
+      && time python3 reconstruct.py
+      && echo 'DONE'
+    \""
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: /project/sawtooth-core/validator
+
+  intkey-tp-0:
+    image: sawtooth-intkey-tp-go:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: intkey-tp-go -C tcp://test-reconstruction:4004 --max-queue-size 1024 --worker-thread-count 32
+    stop_signal: SIGKILL
+
+  smallbank-tp-0:
+    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: smallbank-tp-go -C tcp://test-reconstruction:4004 --max-queue-size 1024 --worker-thread-count 32
+    stop_signal: SIGKILL
+
+  settings-tp-0:
+    image: sawtooth-settings-tp:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: settings-tp -C tcp://test-reconstruction:4004
+    stop_signal: SIGKILL
+
+  poet-validator-registry-tp-0:
+    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: poet-validator-registry-tp -C tcp://test-reconstruction:4004
+    environment:
+      PYTHONPATH: /project/sawtooth-core/consensus/poet/common
+    stop_signal: SIGKILL
+
+  identity-tp:
+    image: sawtooth-identity-tp:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: identity-tp -C tcp://test-reconstruction:4004
+    stop_signal: SIGKILL
