@@ -25,7 +25,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: settings-tp -vv -C tcp://validator:4004
+    command: settings-tp -C tcp://validator:4004
     stop_signal: SIGKILL
 
   intkey-tp-python:
@@ -36,7 +36,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: intkey-tp-python -vv -C tcp://validator:4004
+    command: intkey-tp-python -C tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:
@@ -52,7 +52,7 @@ services:
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
         sawadm genesis config-genesis.batch && \
-        sawtooth-validator -v \
+        sawtooth-validator \
             --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:4004 \
             --bind network:tcp://eth0:8800 \
@@ -68,7 +68,7 @@ services:
       - 8008
     depends_on:
       - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
+    command: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
 
   test-intkey-smoke-python:
@@ -81,8 +81,6 @@ services:
       - validator
       - rest-api
     command: nose2-3
-        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
-        -v
         -s /project/sawtooth-core/integration/sawtooth_integration/tests
         test_intkey_smoke.TestIntkeySmoke
     stop_signal: SIGKILL
