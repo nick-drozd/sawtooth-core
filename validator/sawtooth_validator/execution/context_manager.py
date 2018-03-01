@@ -31,12 +31,26 @@ from sawtooth_validator.execution.execution_context import ExecutionContext
 LOGGER = logging.getLogger(__name__)
 
 
+# LMDB pages are 4096 bytes. Each page contains a 16-byte header and
+# two records, each of which consists of a key, a value, and an
+# additional 8-byte overhead. Sawtooth keys are 35 bytes, so the max
+# size for a value is ((4096 - 16) / 2) - (8 + 35) = 1997.
+MAX_BYTES = 1997
+
+
 class CreateContextException(Exception):
     pass
 
 
 class SquashException(Exception):
     pass
+
+
+class PageSizeException(Exception):
+    def __init__(self, address, bytes_size):
+        super().__init__(
+            'Value to be set at addresss {} has size {}; cannot exceed {}'
+            .format(address, bytes_size, MAX_BYTES))
 
 
 _SHUTDOWN_SENTINEL = -1
@@ -356,6 +370,9 @@ class ContextManager(object):
         add_value_dict = {}
         for d in address_value_list:
             for add, val in d.items():
+                bytes_len = len(val)
+                if bytes_len > MAX_BYTES:
+                    raise PageSizeException(add, bytes_len)
                 if not self.address_is_valid(address=add):
                     raise AuthorizationException(address=add)
                 add_value_dict[add] = val
