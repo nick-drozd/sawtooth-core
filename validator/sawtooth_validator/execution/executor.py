@@ -43,6 +43,11 @@ LOGGER = logging.getLogger(__name__)
 COLLECTOR = metrics.get_collector(__name__)
 
 
+PARSED_CONFIG_SETTINGS = {
+    '[]': [],
+}
+
+
 class TransactionExecutorThread(object):
     """A thread of execution controlled by the TransactionExecutor.
     Provides the functionality that the journal can process on several
@@ -201,7 +206,7 @@ class TransactionExecutorThread(object):
             config = self._settings_view_factory.create_settings_view(
                 txn_info.state_hash)
 
-            transaction_families = config.get_setting(
+            transaction_families_str = config.get_setting(
                 key=self._tp_settings_key,
                 default_value="[]")
 
@@ -210,16 +215,24 @@ class TransactionExecutorThread(object):
             # If there is a misconfiguration, proceed as if there is no
             # configuration.
             try:
-                transaction_families = json.loads(transaction_families)
-                required_transaction_processors = [
-                    ProcessorType(
-                        d.get('family'),
-                        d.get('version')) for d in transaction_families]
-            except ValueError:
-                LOGGER.error("sawtooth.validator.transaction_families "
-                             "misconfigured. Expecting a json array, found"
-                             " %s", transaction_families)
-                required_transaction_processors = []
+                required_transaction_processors = \
+                    PARSED_CONFIG_SETTINGS[transaction_families_str]
+            except KeyError:
+                try:
+                    transaction_families = json.loads(transaction_families_str)
+                    required_transaction_processors = [
+                        ProcessorType(
+                            d.get('family'),
+                            d.get('version'))
+                        for d in transaction_families
+                    ]
+                    PARSED_CONFIG_SETTINGS[transaction_families_str] = \
+                        required_transaction_processors
+                except ValueError:
+                    LOGGER.error("sawtooth.validator.transaction_families "
+                                 "misconfigured. Expecting a json array, found"
+                                 " %self", transaction_families)
+                    required_transaction_processors = []
 
             # First check if the transaction should be failed
             # based on configuration
