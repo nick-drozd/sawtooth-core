@@ -824,19 +824,17 @@ class ParallelScheduler(Scheduler):
             self._batches_by_id[self._least_batch_id_wo_results].batch)
 
         current_index = self._index_of_batch(batch)
-        all_prior = False
 
         if current_index <= least_index:
             return
-            # Test to see if all batches from the least_batch to
-            # the prior batch to the current batch have results.
-        if all(
-                all(t.header_signature in self._txn_results
-                    for t in b.transactions)
-                for b in self._batches[least_index:current_index]):
-            all_prior = True
-        if not all_prior:
+
+        # Test to see if all batches from the least_batch to
+        # the prior batch to the current batch have results.
+        if any(t.header_signature not in self._txn_results
+               for b in self._batches[least_index:current_index]
+               for t in b.transactions):
             return
+
         possible_least = self._batches[current_index].header_signature
         # Find the first batch from the current batch on, that doesn't have
         # all results.
