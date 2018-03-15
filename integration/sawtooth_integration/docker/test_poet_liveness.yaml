@@ -17,59 +17,48 @@ version: "2.1"
 
 services:
 
-  test-poet-liveness:
-    image: sawtooth-dev-python:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    command: nose2-3
-        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
-        -vvvv
-        -s /project/sawtooth-core/integration/sawtooth_integration/tests
-        test_poet_liveness
-    expose:
-      - 8008
-    stop_signal: SIGKILL
-    environment:
-      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/integration:\
-        /project/sawtooth-core/signing:\
-        /project/sawtooth-core/cli"
+  # test-poet-liveness:
+  #   image: sawtooth-dev-python:latest
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   # command: nose2-3
+  #   #     -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+  #   #     -vvvv
+  #   #     -s /project/sawtooth-core/integration/sawtooth_integration/tests
+  #   #     test_poet_liveness
+  #   command: tail -f /dev/null
+  #   expose:
+  #     - 8008
+  #   stop_signal: SIGKILL
+  #   environment:
+  #     PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+  #       /project/sawtooth-core/integration:\
+  #       /project/sawtooth-core/signing:\
+  #       /project/sawtooth-core/cli"
 
-  intkey-workload:
-    image: sawtooth-dev-python:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 8008
-    command: "bash -c \"\
-      while true; do curl -s http://rest-api-0:8008/state | grep -q head; if [ $$? -eq 0 ]; then break; fi; sleep 0.5; done; \
-      intkey workload --rate 1 --display-frequency 15 --urls http://rest-api-0:8008,http://rest-api-1:8008,http://rest-api-2:8008,http://rest-api-3:8008,http://rest-api-4:8008 \
-      \""
-    stop_signal: SIGKILL
-    environment:
-      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/sdk/examples/intkey_python:\
-        /project/sawtooth-core/integration:\
-        /project/sawtooth-core/signing:\
-        /project/sawtooth-core/cli"
-
-  smallbank-workload:
-    image: sawtooth-dev-python:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 8008
-    command: "bash -c \"\
-      sawtooth keygen smallbank-key; \
-      while true; do curl -s http://rest-api-0:8008/state | grep -q head; if [ $$? -eq 0 ]; then break; fi; sleep 0.5; done; \
-      /project/sawtooth-core/perf/smallbank_workload/bin/smallbank-workload load --key /root/.sawtooth/keys/smallbank-key.priv --rate 1 --target http://rest-api-0:8008,http://rest-api-1:8008,http://rest-api-2:8008,http://rest-api-3:8008,http://rest-api-4:8008 \
-      \""
-    stop_signal: SIGKILL
+  # intkey-workload:
+  #   image: sawtooth-dev-python:latest
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   expose:
+  #     - 8008
+  #   command: "bash -c \"\
+  #     while true; do curl -s http://rest-api-0:8008/state | grep -q head; if [ $$? -eq 0 ]; then break; fi; sleep 0.5; done; \
+  #     intkey workload --rate 10 --display-frequency 15 --urls http://rest-api-0:8008,http://rest-api-1:8008,http://rest-api-2:8008,http://rest-api-3:8008,http://rest-api-4:8008 \
+  #     \""
+  #   stop_signal: SIGKILL
+  #   environment:
+  #     PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+  #       /project/sawtooth-core/sdk/examples/intkey_python:\
+  #       /project/sawtooth-core/integration:\
+  #       /project/sawtooth-core/signing:\
+  #       /project/sawtooth-core/cli"
 
   validator-0:
-    image: sawtooth-validator:$ISOLATION_ID
+    image: sawtooth-validator:latest
+    container_name: validator-0
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
       - 8800
@@ -87,8 +76,6 @@ services:
           \\\"$$(cat /project/sawtooth-core/consensus/poet/simulator/packaging/simulator_rk_pub.pem)\\\" \
           sawtooth.poet.valid_enclave_measurements=$$(poet enclave measurement) \
           sawtooth.poet.valid_enclave_basenames=$$(poet enclave basename) \
-          sawtooth.validator.batch_injectors=block_info \
-          'sawtooth.validator.block_validation_rules=NofX:1,block_info;XatY:block_info,0;local:0' \
           -o config.batch && \
         poet registration create -k /etc/sawtooth/keys/validator.priv -o poet.batch && \
         sawset proposal create \
@@ -102,14 +89,14 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/families/block_info"
-    stop_signal: SIGKILL
+        /project/sawtooth-core/consensus/poet/core"
+    stop_signal: SIGINT
 
   validator-1:
-    image: sawtooth-validator:$ISOLATION_ID
+    image: sawtooth-validator:latest
+    container_name: validator-1
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
       - 8800
@@ -121,14 +108,14 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/families/block_info"
-    stop_signal: SIGKILL
+        /project/sawtooth-core/consensus/poet/core"
+    stop_signal: SIGINT
 
   validator-2:
-    image: sawtooth-validator:$ISOLATION_ID
+    image: sawtooth-validator:latest
+    container_name: validator-2
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
       - 8800
@@ -140,52 +127,51 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/families/block_info"
-    stop_signal: SIGKILL
+        /project/sawtooth-core/consensus/poet/core"
+    stop_signal: SIGINT
 
-  validator-3:
-    image: sawtooth-validator:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-      - 8800
-    command: "bash -c \"\
-        cp /project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/validator-3.toml /etc/sawtooth/validator.toml && \
-        sawadm keygen --force && \
-        sawtooth-validator -v
-    \""
-    environment:
-      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
-        /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/families/block_info"
-    stop_signal: SIGKILL
+  # validator-3:
+  #   image: sawtooth-validator:latest
+  #   container_name: validator-3
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   expose:
+  #     - 4004
+  #     - 8800
+  #   command: "bash -c \"\
+  #       cp /project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/validator-3.toml /etc/sawtooth/validator.toml && \
+  #       sawadm keygen --force && \
+  #       sawtooth-validator
+  #   \""
+  #   environment:
+  #     PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
+  #       /project/sawtooth-core/consensus/poet/simulator:\
+  #       /project/sawtooth-core/consensus/poet/core"
+  #   stop_signal: SIGINT
 
-  validator-4:
-    image: sawtooth-validator:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-      - 8800
-    command: "bash -c \"\
-        cp /project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/validator-4.toml /etc/sawtooth/validator.toml && \
-        sawadm keygen --force && \
-        sawtooth-validator -v
-    \""
-    environment:
-      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
-        /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/families/block_info"
-    stop_signal: SIGKILL
+  # validator-4:
+  #   image: sawtooth-validator:latest
+  #   container_name: validator-4
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   expose:
+  #     - 4004
+  #     - 8800
+  #   command: "bash -c \"\
+  #       cp /project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/validator-4.toml /etc/sawtooth/validator.toml && \
+  #       sawadm keygen --force && \
+  #       sawtooth-validator
+  #   \""
+  #   environment:
+  #     PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
+  #       /project/sawtooth-core/consensus/poet/simulator:\
+  #       /project/sawtooth-core/consensus/poet/core"
+  #   stop_signal: SIGINT
 
   rest-api-0:
-    image: sawtooth-rest-api:$ISOLATION_ID
+    image: sawtooth-rest-api:latest
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
       - 8008
@@ -193,9 +179,9 @@ services:
     stop_signal: SIGKILL
 
   rest-api-1:
-    image: sawtooth-rest-api:$ISOLATION_ID
+    image: sawtooth-rest-api:latest
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
       - 8008
@@ -203,174 +189,129 @@ services:
     stop_signal: SIGKILL
 
   rest-api-2:
-    image: sawtooth-rest-api:$ISOLATION_ID
+    image: sawtooth-rest-api:latest
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
       - 8008
     command: sawtooth-rest-api --connect tcp://validator-2:4004 --bind rest-api-2:8008
     stop_signal: SIGKILL
 
-  rest-api-3:
-    image: sawtooth-rest-api:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-      - 8008
-    command: sawtooth-rest-api --connect tcp://validator-3:4004 --bind rest-api-3:8008
-    stop_signal: SIGKILL
+  # rest-api-3:
+  #   image: sawtooth-rest-api:latest
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   expose:
+  #     - 4004
+  #     - 8008
+  #   command: sawtooth-rest-api --connect tcp://validator-3:4004 --bind rest-api-3:8008
+  #   stop_signal: SIGKILL
 
-  rest-api-4:
-    image: sawtooth-rest-api:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-      - 8008
-    command: sawtooth-rest-api --connect tcp://validator-4:4004 --bind rest-api-4:8008
-    stop_signal: SIGKILL
-
-  intkey-tp-0:
-    image: sawtooth-intkey-tp-go:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: intkey-tp-go -C tcp://validator-0:4004 --max-queue-size 1024 --worker-thread-count 32
-    stop_signal: SIGKILL
-
-  intkey-tp-1:
-    image: sawtooth-intkey-tp-go:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: intkey-tp-go -C tcp://validator-1:4004 --max-queue-size 1024 --worker-thread-count 32
-    stop_signal: SIGKILL
-
-  intkey-tp-2:
-    image: sawtooth-intkey-tp-go:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: intkey-tp-go -C tcp://validator-2:4004 --max-queue-size 1024 --worker-thread-count 32
-    stop_signal: SIGKILL
-
-  intkey-tp-3:
-    image: sawtooth-intkey-tp-go:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: intkey-tp-go -C tcp://validator-3:4004 --max-queue-size 1024 --worker-thread-count 32
-    stop_signal: SIGKILL
-
-  intkey-tp-4:
-    image: sawtooth-intkey-tp-go:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: intkey-tp-go -C tcp://validator-4:4004 --max-queue-size 1024 --worker-thread-count 32
-    stop_signal: SIGKILL
+  # rest-api-4:
+  #   image: sawtooth-rest-api:latest
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   expose:
+  #     - 4004
+  #     - 8008
+  #   command: sawtooth-rest-api --connect tcp://validator-4:4004 --bind rest-api-4:8008
+  #   stop_signal: SIGKILL
 
   smallbank-tp-0:
-    image: sawtooth-dev-rust:$ISOLATION_ID
+    image: sawtooth-dev-rust:latest
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
     command: smallbank-tp-rust -C tcp://validator-0:4004
     stop_signal: SIGKILL
 
   smallbank-tp-1:
-    image: sawtooth-dev-rust:$ISOLATION_ID
+    image: sawtooth-dev-rust:latest
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
     command: smallbank-tp-rust -C tcp://validator-1:4004
     stop_signal: SIGKILL
 
   smallbank-tp-2:
-    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    image: hyperledger/sawtooth-smallbank-tp-go:1.0
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
-    command: smallbank-tp-go -C tcp://validator-2:4004 --max-queue-size 1024 --worker-thread-count 32
+    command: smallbank-tp-go tcp://validator-2:4004
     stop_signal: SIGKILL
 
-  smallbank-tp-3:
-    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: smallbank-tp-go -C tcp://validator-3:4004 --max-queue-size 1024 --worker-thread-count 32
-    stop_signal: SIGKILL
+  # smallbank-tp-3:
+  #   image: hyperledger/sawtooth-smallbank-tp-go:1.0
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   expose:
+  #     - 4004
+  #   command: smallbank-tp-go -C tcp://validator-3:4004
+  #   stop_signal: SIGKILL
 
-  smallbank-tp-4:
-    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: smallbank-tp-go -C tcp://validator-4:4004 --max-queue-size 1024 --worker-thread-count 32
-    stop_signal: SIGKILL
+  # smallbank-tp-4:
+  #   image: hyperledger/sawtooth-smallbank-tp-go:1.0
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   expose:
+  #     - 4004
+  #   command: smallbank-tp-go -C tcp://validator-4:4004
+  #   stop_signal: SIGKILL
 
   settings-tp-0:
-    image: sawtooth-settings-tp:$ISOLATION_ID
+    image: sawtooth-settings-tp:latest
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
     command: settings-tp -C tcp://validator-0:4004
     stop_signal: SIGKILL
 
   settings-tp-1:
-    image: sawtooth-settings-tp:$ISOLATION_ID
+    image: sawtooth-settings-tp:latest
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
     command: settings-tp -C tcp://validator-1:4004
     stop_signal: SIGKILL
 
   settings-tp-2:
-    image: sawtooth-settings-tp:$ISOLATION_ID
+    image: sawtooth-settings-tp:latest
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
     command: settings-tp -C tcp://validator-2:4004
     stop_signal: SIGKILL
 
-  settings-tp-3:
-    image: sawtooth-settings-tp:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: settings-tp -C tcp://validator-3:4004
-    stop_signal: SIGKILL
+  # settings-tp-3:
+  #   image: sawtooth-settings-tp:latest
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   expose:
+  #     - 4004
+  #   command: settings-tp -C tcp://validator-3:4004
+  #   stop_signal: SIGKILL
 
-  settings-tp-4:
-    image: sawtooth-settings-tp:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: settings-tp -C tcp://validator-4:4004
-    stop_signal: SIGKILL
+  # settings-tp-4:
+  #   image: sawtooth-settings-tp:latest
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   expose:
+  #     - 4004
+  #   command: settings-tp -C tcp://validator-4:4004
+  #   stop_signal: SIGKILL
 
   poet-validator-registry-tp-0:
-    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
+    image: sawtooth-poet-validator-registry-tp:latest
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
     command: poet-validator-registry-tp -C tcp://validator-0:4004
@@ -379,9 +320,9 @@ services:
     stop_signal: SIGKILL
 
   poet-validator-registry-tp-1:
-    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
+    image: sawtooth-poet-validator-registry-tp:latest
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
     command: poet-validator-registry-tp -C tcp://validator-1:4004
@@ -390,9 +331,9 @@ services:
     stop_signal: SIGKILL
 
   poet-validator-registry-tp-2:
-    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
+    image: sawtooth-poet-validator-registry-tp:latest
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 4004
     command: poet-validator-registry-tp -C tcp://validator-2:4004
@@ -400,79 +341,41 @@ services:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL
 
-  poet-validator-registry-tp-3:
-    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: poet-validator-registry-tp -C tcp://validator-3:4004
-    environment:
-      PYTHONPATH: /project/sawtooth-core/consensus/poet/common
-    stop_signal: SIGKILL
+  # poet-validator-registry-tp-3:
+  #   image: sawtooth-poet-validator-registry-tp:latest
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   expose:
+  #     - 4004
+  #   command: poet-validator-registry-tp -C tcp://validator-3:4004
+  #   environment:
+  #     PYTHONPATH: /project/sawtooth-core/consensus/poet/common
+  #   stop_signal: SIGKILL
 
-  poet-validator-registry-tp-4:
-    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: poet-validator-registry-tp -C tcp://validator-4:4004
-    environment:
-      PYTHONPATH: /project/sawtooth-core/consensus/poet/common
-    stop_signal: SIGKILL
+  # poet-validator-registry-tp-4:
+  #   image: sawtooth-poet-validator-registry-tp:latest
+  #   volumes:
+  #     - ../../..:/project/sawtooth-core
+  #   expose:
+  #     - 4004
+  #   command: poet-validator-registry-tp -C tcp://validator-4:4004
+  #   environment:
+  #     PYTHONPATH: /project/sawtooth-core/consensus/poet/common
+  #   stop_signal: SIGKILL
 
-  block-info-tp-0:
-    image: sawtooth-block-info-tp:$ISOLATION_ID
+  shell:
+    image: sawtooth-dev-rust:latest
+    container_name: sawtooth-shell-default
     volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: block-info-tp -C tcp://validator-0:4004
-    environment:
-      PYTHONPATH: /project/sawtooth-core/families/block_info
-    stop_signal: SIGKILL
-
-  block-info-tp-1:
-    image: sawtooth-block-info-tp:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: block-info-tp -C tcp://validator-1:4004
-    environment:
-      PYTHONPATH: /project/sawtooth-core/families/block_info
-    stop_signal: SIGKILL
-
-  block-info-tp-2:
-    image: sawtooth-block-info-tp:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: block-info-tp -C tcp://validator-2:4004
-    environment:
-      PYTHONPATH: /project/sawtooth-core/families/block_info
-    stop_signal: SIGKILL
-
-  block-info-tp-3:
-    image: sawtooth-block-info-tp:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: block-info-tp -C tcp://validator-3:4004
-    environment:
-      PYTHONPATH: /project/sawtooth-core/families/block_info
-    stop_signal: SIGKILL
-
-  block-info-tp-4:
-    image: sawtooth-block-info-tp:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: block-info-tp -C tcp://validator-4:4004
-    environment:
-      PYTHONPATH: /project/sawtooth-core/families/block_info
-    stop_signal: SIGKILL
+      - ../../..:/project/sawtooth-core
+    entrypoint: "bash -c \"\
+        cd /project/sawtooth-core/perf/smallbank_workload && \
+        sleep 20 && \
+        ./target/debug/smallbank-workload submit -i smallbank-3000 -t http://rest-api-0:8008 && \
+        echo done && \
+        tail -f /dev/null
+        \""
+        # ./target/debug/smallbank-workload playlist create -a 10 -S 66 -n 3000 -o playlist.yaml && \
+        # ./target/debug/smallbank-workload playlist process -i playlist.yaml -k root.priv -o smallbank.txns && \
+        # ./target/debug/smallbank-workload batch -i smallbank.txns -k root.priv -o smallbank-4 && \
+        # echo done

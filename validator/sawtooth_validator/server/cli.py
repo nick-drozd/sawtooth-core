@@ -23,6 +23,7 @@ import pkg_resources
 from pyformance import MetricsRegistry
 from pyformance.reporters import InfluxReporter
 import netifaces
+import yappi
 
 from sawtooth_validator.config.path import load_path_config
 from sawtooth_validator.config.validator import load_default_validator_config
@@ -42,6 +43,9 @@ from sawtooth_validator import metrics
 
 LOGGER = logging.getLogger(__name__)
 DISTRIBUTION_NAME = 'sawtooth-validator'
+
+
+PROFILE = True
 
 
 def parse_args(args):
@@ -382,6 +386,9 @@ def main(args=None):
 
     # pylint: disable=broad-except
     try:
+        if PROFILE:
+            yappi.set_clock_type('cpu')
+            yappi.start()
         validator.start()
     except KeyboardInterrupt:
         LOGGER.info("Initiating graceful "
@@ -396,6 +403,11 @@ def main(args=None):
         LOGGER.exception(e)
         sys.exit(1)
     finally:
+        if PROFILE:
+            stats = yappi.get_func_stats()
+            stats.save(
+                'validator.callgrind',
+                type='callgrind')
         if metrics_reporter:
             metrics_reporter.stop()
         validator.stop()

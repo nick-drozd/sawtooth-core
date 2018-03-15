@@ -107,16 +107,11 @@ def main():
 
             test_service_uppercase = test_service.upper()
 
-            LOGGER.info('Starting test %s', test_service_uppercase)
-
-            LOGGER.info("Bringing up with %s", str(compose_up))
-
             try:
                 # 1. Run the tests
                 subprocess.run(
                     compose_up,
-                    check=True,
-                    timeout=timer.remaining())
+                    check=True)
 
             except FileNotFoundError as err:
                 LOGGER.error("Bad docker-compose up command")
@@ -134,7 +129,6 @@ def main():
                 exit_status = 1
 
             if exit_status == 0:
-                LOGGER.info("Getting result with: %s", str(inspect))
                 try:
                     # 2. Get the exit code of the test container
                     exit_status = int(subprocess.run(
@@ -165,18 +159,12 @@ def main():
 
                 for line in info.split('\n'):
                     container, image, install_type = line.split(',')
-                    LOGGER.info(
-                        "Container %s ran image %s with install-type %s",
-                        container, image, install_type
-                    )
 
             except BaseException:
                 LOGGER.error("Could not gather information about image used.")
 
         else:  # cleaning
             exit_status = 0
-
-        LOGGER.info("Shutting down with: %s", str(compose_down))
 
         shutdown_success = False
         for _ in range(2):
