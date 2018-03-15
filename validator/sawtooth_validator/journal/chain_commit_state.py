@@ -90,13 +90,15 @@ class ChainCommitState:
         return False
 
     @staticmethod
-    def _check_for_duplicates_within(key_fn, items):
-        """Checks that for any two items in `items`, calling `key_fn` on both
-        does not return equal values."""
+    def _check_for_duplicate_signatures(items):
+        """Checks whether any two items in ITEMS have the same header
+        signature. If so, the first duplicate signature found is
+        returned, else None is returned.
+        """
         for i, item_i in enumerate(items):
             for item_j in items[i + 1:]:
-                if key_fn(item_i) == key_fn(item_j):
-                    return key_fn(item_i)
+                if item_i.header_signature == item_j.header_signature:
+                    return item_i.header_signature
         return None
 
     def check_for_duplicate_transactions(self, transactions):
@@ -104,8 +106,7 @@ class ChainCommitState:
         committed in the chain. Also checks that the list of transactions
         passed contains no duplicates."""
         # Same as for batches
-        duplicate = self._check_for_duplicates_within(
-            lambda txn: txn.header_signature, transactions)
+        duplicate = self._check_for_duplicate_signatures(transactions)
         if duplicate is not None:
             raise DuplicateTransaction(duplicate)
 
@@ -126,8 +127,7 @@ class ChainCommitState:
         in the chain. Also checks that the list of batches passed contains no
         duplicates."""
         # Check for duplicates within the given list
-        duplicate = self._check_for_duplicates_within(
-            lambda batch: batch.header_signature, batches)
+        duplicate = self._check_for_duplicate_signatures(batches)
         if duplicate is not None:
             raise DuplicateBatch(duplicate)
 
