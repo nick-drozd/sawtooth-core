@@ -244,14 +244,20 @@ class MerkleDatabase(object):
                         if not pa_map['c']:
                             del path_map['']['c'][path_branch]
 
+        sorted_path_map = sorted(path_map, key=len, reverse=True)
+
         # Rebuild the hashes to the new root
-        for path in sorted(path_map, key=len, reverse=True):
+        for path in sorted_path_map[:-1]:
             (key_hash, packed) = _encode_and_hash(path_map[path])
             update_batch.append((key_hash, packed))
-            if path != '':
-                parent_address = path[:-TOKEN_SIZE]
-                path_branch = path[-TOKEN_SIZE:]
-                path_map[parent_address]['c'][path_branch] = key_hash
+            parent_address = path[:-TOKEN_SIZE]
+            path_branch = path[-TOKEN_SIZE:]
+            path_map[parent_address]['c'][path_branch] = key_hash
+
+        (key_hash, packed) = _encode_and_hash(path_map[''])
+        update_batch.append((key_hash, packed))
+
+        # update_batch.append(_encode_and_hash(path_map['']))
 
         if not virtual:
             # Apply all new hash, value pairs to the database
