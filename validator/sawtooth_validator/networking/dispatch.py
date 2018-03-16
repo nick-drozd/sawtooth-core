@@ -272,7 +272,7 @@ class Dispatcher(InstrumentedThread):
             del self._message_information[message_id]
             return
 
-        timer_tag = type(handler_manager.handler).__name__
+        timer_tag = handler_manager.handler_type
         timer_ctx = self._get_dispatch_timer(timer_tag).time()
 
         def do_next(result):
@@ -434,10 +434,15 @@ class _HandlerManager(object):
         """
         self._executor = executor
         self._handler = handler
+        self._handler_type = type(handler).__name__
 
     @property
     def handler(self):
         return self._handler
+
+    @property
+    def handler_type(self):
+        return self._handler_type
 
     def execute(self, connection_id, message, callback):
         def wrapped(connection_id, message):
