@@ -13,9 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# pylint: disable=too-many-lines
-# Until this module can be sensibly broken up
-
 import abc
 import logging
 from time import time
@@ -23,8 +20,7 @@ import itertools
 from functools import cmp_to_key
 import re
 from threading import Condition
-# pylint: disable=import-error,no-name-in-module
-# needed for google.protobuf import
+
 from google.protobuf.message import DecodeError
 
 from sawtooth_validator.journal.block_store import BlockStore

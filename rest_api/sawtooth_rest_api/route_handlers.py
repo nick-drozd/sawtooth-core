@@ -20,8 +20,6 @@ import json
 import base64
 from aiohttp import web
 
-# pylint: disable=no-name-in-module,import-error
-# needed for the google.protobuf imports to pass pylint
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import DecodeError
 
@@ -43,8 +41,6 @@ from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
 from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
-
-# pylint: disable=too-many-lines
 
 DEFAULT_TIMEOUT = 300
 LOGGER = logging.getLogger(__name__)

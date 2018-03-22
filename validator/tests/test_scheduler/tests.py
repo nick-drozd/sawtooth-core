@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# pylint: disable=too-many-lines,invalid-name
+# pylint: disable=invalid-name
 
 import unittest
 import hashlib

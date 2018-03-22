@@ -20,8 +20,6 @@ import queue
 import uuid
 from collections import namedtuple
 
-# pylint: disable=import-error,no-name-in-module
-# needed for google.protobuf import
 from google.protobuf.message import DecodeError
 
 from sawtooth_validator.concurrent.thread import InstrumentedThread

@@ -17,8 +17,7 @@ import json
 from base64 import b64encode
 from http.client import RemoteDisconnected
 import requests
-# pylint: disable=no-name-in-module,import-error
-# needed for the google.protobuf imports to pass pylint
+
 from google.protobuf.message import Message as BaseMessage
 
 from sawtooth_cli.exceptions import CliException

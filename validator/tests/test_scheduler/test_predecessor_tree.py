@@ -13,7 +13,7 @@
 # limitations under the License.
 # ----------------------------------------------------------------------------
 
-# pylint: disable=too-many-lines,protected-access
+# pylint: disable=protected-access
 
 import unittest
 

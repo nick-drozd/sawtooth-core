@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# pylint: disable=too-many-lines
 # pylint: disable=pointless-statement
 # pylint: disable=protected-access
 # pylint: disable=unbalanced-tuple-unpacking

@@ -53,8 +53,6 @@ from sawtooth_validator import metrics
 LOGGER = logging.getLogger(__name__)
 COLLECTOR = metrics.get_collector(__name__)
 
-# pylint: disable=too-many-lines
-
 
 class ConnectionType(Enum):
     OUTBOUND_CONNECTION = 1

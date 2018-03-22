@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# pylint: disable=too-many-lines,broad-except
+# pylint: disable=broad-except
 
 import unittest
 
