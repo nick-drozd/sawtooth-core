@@ -17,14 +17,17 @@ from sawtooth_poet.poet_block_publisher import PoetBlockPublisher
 
 
 class PoetOracle:
-    def __init__(self,
-                 service,
-                 batch_publisher,
-                 data_dir,
-                 config_dir,
-                 validator_id):
+    def __init__(self, service):
         block_cache = _BlockCacheProxy(service)
         state_view_factory = _StateViewFactoryProxy(service)
+
+        # this needs a component endpoint (?)
+        batch_publisher = _BatchPublisherProxy()
+
+        # these should eventually be passed in
+        data_dir = '/var/lib/sawtooth/'
+        config_dir = '/etc/sawtooth/'
+        validator_id = 'this-should-be-the-validator-public-key'
 
         self._publisher = PoetBlockPublisher(
             block_cache=block_cache,
@@ -97,4 +100,5 @@ class _StateViewProxy:
 
 
 class _BatchPublisherProxy:
-    pass
+    def send(self, transactions):
+        pass

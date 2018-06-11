@@ -21,6 +21,8 @@ from sawtooth_sdk.consensus.engine import Engine
 from sawtooth_sdk.consensus import exceptions
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 
+from sawtooth_poet_engine.oracle import PoetOracle
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +32,7 @@ class PoetEngine(Engine):
         self._exit = False
         self._service = None
         self._chain_head = None
+        self._oracle = None
 
     def name(self):
         return 'PoET'
@@ -94,6 +97,8 @@ class PoetEngine(Engine):
     def start(self, updates, service, chain_head, peers):
         self._service = service
         self._chain_head = chain_head
+
+        self._oracle = PoetOracle(service)
 
         self._initialize_block()
 
