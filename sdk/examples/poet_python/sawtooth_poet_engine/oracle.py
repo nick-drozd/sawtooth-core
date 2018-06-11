@@ -13,7 +13,7 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 
-from sawtooth_poet.poet_block_publisher import PoetBlockPublisher
+from sawtooth_poet.poet_consensus.poet_block_publisher import PoetBlockPublisher
 
 
 class PoetOracle:
