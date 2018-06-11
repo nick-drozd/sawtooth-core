@@ -138,9 +138,12 @@ class BlockWrapper(object):
         Returns:
             StateView object associated with the block
         """
-        state_root_hash = \
-            block_wrapper.state_root_hash \
-            if block_wrapper is not None else None
+        try:
+            state_root_hash = \
+                block_wrapper.state_root_hash \
+                if block_wrapper is not None else None
+        except AttributeError:
+            state_root_hash = None
 
         return state_view_factory.create_view(state_root_hash)
 

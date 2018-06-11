@@ -44,7 +44,16 @@ class PoetEngine(Engine):
         self._exit = True
 
     def _initialize_block(self):
-        self._service.initialize_block(None)
+        chain_head = self._get_chain_head()
+
+        try:
+            if self._oracle.initialize_block(chain_head):
+                LOGGER.error('initializing')
+                self._service.initialize_block(chain_head)
+            else:
+                LOGGER.error('not initializing')
+        except Exception as err:
+            LOGGER.error('--> --> %s', err)
 
     def _check_consensus(self, block):
         return True
@@ -59,9 +68,14 @@ class PoetEngine(Engine):
         self._service.fail_block(block_id)
 
     def _get_chain_head(self):
-        return self._service.get_chain_head()
+        LOGGER.warning('getting chain head')
+
+        chain_head = _Block(self._service.get_chain_head())
+
+        return chain_head
 
     def _get_block(self, block_id):
+        LOGGER.warning('getting block')
         return self._service.get_blocks([block_id])
 
     def _commit_block(self, block_id):
@@ -101,6 +115,8 @@ class PoetEngine(Engine):
         self._oracle = PoetOracle(service)
 
         self._initialize_block()
+
+        LOGGER.error('after')
 
         # 1. Wait for an incoming message.
         # 2. Cnheck for exit.
@@ -171,3 +187,22 @@ class PoetEngine(Engine):
         self._cancel_block()
 
         self._initialize_block()
+
+
+class _Block:
+    def __init__(self, block):
+        self.block_id = block.block_id
+        self.previous_id = block.previous_id
+        self.signer_id = block.signer_id
+        self.block_num = block.block_num
+        self.payload = block.payload
+        self.summary = block.summary
+        self.state_root_hash = None
+
+    @property
+    def identifier(self):
+        return self.block_id
+
+    @property
+    def previous_block_id(self):
+        return self.previous_id

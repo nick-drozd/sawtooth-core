@@ -37,6 +37,9 @@ class PoetOracle:
             config_dir=config_dir,
             validator_id=validator_id)
 
+    def initialize_block(self, block):
+        return self._publisher.initialize_block(block)
+
 
 class _BlockCacheProxy:
     def __init__(self, service):
