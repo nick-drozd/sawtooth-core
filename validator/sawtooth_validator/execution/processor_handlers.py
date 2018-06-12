@@ -37,10 +37,10 @@ class ProcessorRegisterHandler(Handler):
         request.ParseFromString(message_content)
         if request.max_occupancy == 0:
             max_occupancy = DEFAULT_MAX_OCCUPANCY
-            LOGGER.warning(
-                'Max occupancy was not provided by transaction processor: %s.'
-                ' Using default max occupancy: %s',
-                connection_id, DEFAULT_MAX_OCCUPANCY)
+            # LOGGER.warning(
+            #     'Max occupancy was not provided by transaction processor: %s.'
+            #     ' Using default max occupancy: %s',
+            #     connection_id, DEFAULT_MAX_OCCUPANCY)
         else:
             max_occupancy = request.max_occupancy
 

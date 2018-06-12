@@ -139,7 +139,7 @@ services:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    command: poet-python --connect tcp://validator-0:5005 -v
+    command: poet-python --connect tcp://validator-0:5005 -vv
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
