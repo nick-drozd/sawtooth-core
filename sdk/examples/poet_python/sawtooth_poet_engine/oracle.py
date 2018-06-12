@@ -81,7 +81,7 @@ class PoetBlock:
 
         # fields that poet requires
         self.identifier = block.block_id
-        self.previous_block_id = block.previous_id
+        self.previous_block_id = block.previous_id.hex()
         self.signer_public_key = block.signer_id.hex()
         self.header = _DummyHeader(block)
 
@@ -167,5 +167,7 @@ class _StateViewProxy:
 
 
 class _BatchPublisherProxy:
+    # this needs a signer
+
     def send(self, transactions):
         pass

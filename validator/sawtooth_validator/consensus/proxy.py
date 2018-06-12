@@ -153,12 +153,6 @@ class ConsensusProxy:
 
     def state_get(self, block_id, addresses):
         '''Returns a list of address/data pairs (str, bytes)'''
-
-        LOGGER.error(
-            'proxy.state_get -- block_id: %s -- addresses: %s',
-            block_id,
-            addresses)
-
         state_view = \
             self._get_blocks([block_id])[0].get_state_view(
                 self._state_view_factory)

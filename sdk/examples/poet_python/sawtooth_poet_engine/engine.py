@@ -26,7 +26,7 @@ from sawtooth_poet_engine.oracle import PoetOracle, PoetBlock
 
 LOGGER = logging.getLogger(__name__)
 
-POET_INITIALIZE = 0
+POET_INITIALIZE = 1
 POET_VERIFY = 0
 POET_FORK = 0
 
