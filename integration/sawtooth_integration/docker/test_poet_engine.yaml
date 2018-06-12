@@ -88,6 +88,11 @@ services:
             --peering dynamic \
             --scheduler parallel \
     \""
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
+        /project/sawtooth-core/consensus/poet/simulator:\
+        /project/sawtooth-core/consensus/poet/core:\
+        /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
   # validator-1:
