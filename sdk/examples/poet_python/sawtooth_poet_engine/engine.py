@@ -66,6 +66,7 @@ class PoetEngine(Engine):
                 LOGGER.error('not initializing')
         except Exception as err:
             LOGGER.exception('_initialize_block')
+            raise
 
     def _check_consensus(self, block):
         if not POET_VERIFY:
@@ -83,9 +84,12 @@ class PoetEngine(Engine):
 
         try:
             return self._oracle.switch_forks(current_head, new_head)
+        except TypeError as err:
+            LOGGER.error('%s', err)
         except:
             LOGGER.exception('switch_forks')
-            return True
+
+        return True
 
     def _check_block(self, block_id):
         self._service.check_blocks([block_id])

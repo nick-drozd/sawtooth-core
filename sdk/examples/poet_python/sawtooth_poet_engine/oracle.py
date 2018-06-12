@@ -68,6 +68,7 @@ class PoetOracle:
         '''"compare_forks" is not an intuitive name.'''
         return self._fork_resolver.compare_forks(cur_fork_head, new_fork_head)
 
+
 class PoetBlock:
     def __init__(self, block):
         # fields that come with consensus blocks
@@ -82,9 +83,15 @@ class PoetBlock:
         self.identifier = block.block_id
         self.previous_block_id = block.previous_id
         self.signer_public_key = block.signer_id.hex()
+        self.header = _DummyHeader(block.payload)
 
         # this is a trick
         self.state_root_hash = block.block_id
+
+
+class _DummyHeader:
+    def __init__(self, consensus):
+        self.consensus = consensus
 
 
 class _BlockCacheProxy:
