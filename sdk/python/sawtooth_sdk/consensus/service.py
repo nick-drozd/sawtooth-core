@@ -25,10 +25,6 @@ class Block:
         self.payload = block.payload
         self.summary = block.summary
 
-    @property
-    def identifier(self):
-        return self.block_id
-
 
 class Service(metaclass=abc.ABCMeta):
     '''Provides methods that allow the consensus engine to issue commands

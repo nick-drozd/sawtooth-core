@@ -44,7 +44,10 @@ class PoetEngine(Engine):
         self._exit = True
 
     def _initialize_block(self):
-        chain_head = self._get_chain_head()
+        try:
+            chain_head = self._get_chain_head()
+        except Exception as err:
+            LOGGER.error('... %s', err)
 
         try:
             if self._oracle.initialize_block(chain_head):
@@ -70,13 +73,15 @@ class PoetEngine(Engine):
     def _get_chain_head(self):
         LOGGER.warning('getting chain head')
 
-        chain_head = _Block(self._service.get_chain_head())
+        chain_head = _patch_block_fields(
+            self._service.get_chain_head())
 
         return chain_head
 
     def _get_block(self, block_id):
         LOGGER.warning('getting block')
-        return self._service.get_blocks([block_id])
+        return _patch_block_fields(
+            self._service.get_blocks([block_id]))
 
     def _commit_block(self, block_id):
         self._service.commit_block(block_id)
@@ -189,20 +194,11 @@ class PoetEngine(Engine):
         self._initialize_block()
 
 
-class _Block:
-    def __init__(self, block):
-        self.block_id = block.block_id
-        self.previous_id = block.previous_id
-        self.signer_id = block.signer_id
-        self.block_num = block.block_num
-        self.payload = block.payload
-        self.summary = block.summary
-        self.state_root_hash = None
+def _patch_block_fields(block):
+    '''Add PoET-required fields to consensus blocks.'''
 
-    @property
-    def identifier(self):
-        return self.block_id
+    block.identifier = block.block_id
+    block.previous_block_id = block.previous_id
+    block.state_root_hash = None
 
-    @property
-    def previous_block_id(self):
-        return self.previous_id
+    return block
