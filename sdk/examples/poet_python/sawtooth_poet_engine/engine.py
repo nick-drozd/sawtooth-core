@@ -27,7 +27,8 @@ from sawtooth_poet_engine.oracle import PoetOracle, PoetBlock
 LOGGER = logging.getLogger(__name__)
 
 POET_INITIALIZE = 0
-POET_VERIFY = 1
+POET_VERIFY = 0
+POET_FORK = 1
 
 
 class PoetEngine(Engine):
@@ -51,7 +52,7 @@ class PoetEngine(Engine):
     def _initialize_block(self):
         chain_head = self._get_chain_head()
 
-        LOGGER.warning('initialize_block -- got chain head')
+        LOGGER.debug('initialize_block -- got chain head')
 
         if not POET_INITIALIZE:
             self._service.initialize_block(chain_head.block_id)
@@ -76,8 +77,15 @@ class PoetEngine(Engine):
             LOGGER.exception('verify_block')
             return True
 
-    def _compare_forks(self, current_head, new_head):
-        return True
+    def _switch_forks(self, current_head, new_head):
+        if not POET_FORK:
+            return True
+
+        try:
+            return self._oracle.switch_forks(current_head, new_head)
+        except:
+            LOGGER.exception('switch_forks')
+            return True
 
     def _check_block(self, block_id):
         self._service.check_blocks([block_id])
@@ -89,7 +97,7 @@ class PoetEngine(Engine):
         return PoetBlock(self._service.get_chain_head())
 
     def _get_block(self, block_id):
-        LOGGER.warning('getting block')
+        LOGGER.debug('getting block')
 
         return PoetBlock(self._service.get_blocks([block_id])[block_id])
 
@@ -146,7 +154,7 @@ class PoetEngine(Engine):
         while True:
             try:
                 type_tag, data = updates.get(timeout=1)
-                LOGGER.warning('got %s', type_tag)
+                LOGGER.debug('got %s', type_tag)
 
                 try:
                     handle_message = handlers[type_tag]
@@ -186,7 +194,7 @@ class PoetEngine(Engine):
             self._chain_head,
             block_id)
 
-        if self._compare_forks(self._chain_head, block):
+        if self._switch_forks(self._chain_head, block):
             LOGGER.info('Committing %s', block)
             self._commit_block(block_id)
         else:

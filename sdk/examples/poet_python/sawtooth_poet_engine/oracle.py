@@ -17,6 +17,7 @@ import logging
 
 from sawtooth_poet.poet_consensus.poet_block_publisher import PoetBlockPublisher
 from sawtooth_poet.poet_consensus.poet_block_verifier import PoetBlockVerifier
+from sawtooth_poet.poet_consensus.poet_fork_resolver import PoetForkResolver
 
 
 LOGGER = logging.getLogger(__name__)
@@ -50,12 +51,22 @@ class PoetOracle:
             config_dir=config_dir,
             validator_id=validator_id)
 
+        self._fork_resolver = PoetForkResolver(
+            block_cache=block_cache,
+            state_view_factory=state_view_factory,
+            data_dir=data_dir,
+            config_dir=config_dir,
+            validator_id=validator_id)
+
     def initialize_block(self, block):
         return self._publisher.initialize_block(block)
 
     def verify_block(self, block):
         return self._verifier.verify_block(block)
 
+    def switch_forks(self, cur_fork_head, new_fork_head):
+        '''"compare_forks" is not an intuitive name.'''
+        return self._fork_resolver.compare_forks(cur_fork_head, new_fork_head)
 
 class PoetBlock:
     def __init__(self, block):
@@ -137,8 +148,6 @@ class _StateViewProxy:
         self._block_id = block_id
 
     def get(self, address):
-        LOGGER.error('StateViewProxy.get -- block_id: %s', self._block_id)
-
         result = self._service.get_state(
             block_id=self._block_id,
             addresses=[address])
