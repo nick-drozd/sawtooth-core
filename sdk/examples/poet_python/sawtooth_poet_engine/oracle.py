@@ -83,15 +83,16 @@ class PoetBlock:
         self.identifier = block.block_id
         self.previous_block_id = block.previous_id
         self.signer_public_key = block.signer_id.hex()
-        self.header = _DummyHeader(block.payload)
+        self.header = _DummyHeader(block)
 
         # this is a trick
         self.state_root_hash = block.block_id
 
 
 class _DummyHeader:
-    def __init__(self, consensus):
-        self.consensus = consensus
+    def __init__(self, block):
+        self.consensus = block.payload
+        self.signer_public_key = block.signer_id.hex()
 
 
 class _BlockCacheProxy:
@@ -158,8 +159,6 @@ class _StateViewProxy:
         result = self._service.get_state(
             block_id=self._block_id,
             addresses=[address])
-
-        LOGGER.error('StateViewProxy.get -- result: %s', result)
 
         return result[address]
 

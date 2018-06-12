@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 
 POET_INITIALIZE = 0
 POET_VERIFY = 0
-POET_FORK = 1
+POET_FORK = 0
 
 
 class PoetEngine(Engine):
@@ -73,10 +73,12 @@ class PoetEngine(Engine):
             return True
 
         try:
-            return self._oracle.verify_block(block)
+            # --> NOT RETURNING <--
+            self._oracle.verify_block(block)
         except:
             LOGGER.exception('verify_block')
-            return True
+
+        return True
 
     def _switch_forks(self, current_head, new_head):
         if not POET_FORK:
