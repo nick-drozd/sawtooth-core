@@ -13,7 +13,12 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 
+import logging
+
 from sawtooth_poet.poet_consensus.poet_block_publisher import PoetBlockPublisher
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class PoetOracle:
@@ -88,18 +93,26 @@ class _StateViewFactoryProxy:
         self._service = service
 
     def create_view(self, state_root_hash=None):
-        return _StateViewProxy(self._service)
+        '''The "state_root_hash" is really the block_id.'''
+
+        block_id = state_root_hash
+
+        return _StateViewProxy(self._service, block_id)
 
 
 class _StateViewProxy:
-    def __init__(self, service):
+    def __init__(self, service, block_id):
         self._service = service
+        self._block_id = block_id
 
     def get(self, address):
-        pass
+        LOGGER.error('StateViewProxy.get -- address: %s', address)
+        result = self._service.get_state(self._block_id, [address])
+        LOGGER.error('StateViewProxy.get -- result: %s', result)
+        return result[address]
 
     def leaves(self, prefix):
-        pass
+        return 'hello'
 
 
 class _BatchPublisherProxy:

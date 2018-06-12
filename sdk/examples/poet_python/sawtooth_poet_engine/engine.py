@@ -44,10 +44,9 @@ class PoetEngine(Engine):
         self._exit = True
 
     def _initialize_block(self):
-        try:
-            chain_head = self._get_chain_head()
-        except Exception as err:
-            LOGGER.error('... %s', err)
+        chain_head = self._get_chain_head()
+
+        LOGGER.error('initialize_block -- got chain head')
 
         try:
             if self._oracle.initialize_block(chain_head):
@@ -56,7 +55,8 @@ class PoetEngine(Engine):
             else:
                 LOGGER.error('not initializing')
         except Exception as err:
-            LOGGER.error('--> --> %s', err)
+            # LOGGER.error('--> %s: %s', type(err), err)
+            LOGGER.exception('_initialize_block')
 
     def _check_consensus(self, block):
         return True
@@ -71,12 +71,7 @@ class PoetEngine(Engine):
         self._service.fail_block(block_id)
 
     def _get_chain_head(self):
-        LOGGER.warning('getting chain head')
-
-        chain_head = _patch_block_fields(
-            self._service.get_chain_head())
-
-        return chain_head
+        return _patch_block_fields(self._service.get_chain_head())
 
     def _get_block(self, block_id):
         LOGGER.warning('getting block')
@@ -199,6 +194,9 @@ def _patch_block_fields(block):
 
     block.identifier = block.block_id
     block.previous_block_id = block.previous_id
-    block.state_root_hash = None
+    block.signer_public_key = block.signer_id.hex()
+
+    # this is a trick
+    block.state_root_hash = block.block_id
 
     return block
