@@ -26,7 +26,8 @@ from sawtooth_poet_engine.oracle import PoetOracle, PoetBlock
 
 LOGGER = logging.getLogger(__name__)
 
-POET = 0
+POET_INITIALIZE = 0
+POET_VERIFY = 1
 
 
 class PoetEngine(Engine):
@@ -52,7 +53,7 @@ class PoetEngine(Engine):
 
         LOGGER.warning('initialize_block -- got chain head')
 
-        if not POET:
+        if not POET_INITIALIZE:
             self._service.initialize_block(chain_head.block_id)
             return
 
@@ -66,7 +67,14 @@ class PoetEngine(Engine):
             LOGGER.exception('_initialize_block')
 
     def _check_consensus(self, block):
-        return True
+        if not POET_VERIFY:
+            return True
+
+        try:
+            return self._oracle.verify_block(block)
+        except:
+            LOGGER.exception('verify_block')
+            return True
 
     def _compare_forks(self, current_head, new_head):
         return True
@@ -123,8 +131,6 @@ class PoetEngine(Engine):
 
         self._initialize_block()
 
-        LOGGER.error('after')
-
         # 1. Wait for an incoming message.
         # 2. Cnheck for exit.
         # 3. Handle the message.
@@ -140,6 +146,7 @@ class PoetEngine(Engine):
         while True:
             try:
                 type_tag, data = updates.get(timeout=1)
+                LOGGER.warning('got %s', type_tag)
 
                 try:
                     handle_message = handlers[type_tag]
@@ -158,6 +165,8 @@ class PoetEngine(Engine):
                 self._finalize_block()
 
     def _handle_new_block(self, block):
+        block = PoetBlock(block)
+
         LOGGER.info('Checking consensus data: %s', block)
 
         if self._check_consensus(block):

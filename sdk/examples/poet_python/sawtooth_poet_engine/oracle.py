@@ -16,6 +16,7 @@
 import logging
 
 from sawtooth_poet.poet_consensus.poet_block_publisher import PoetBlockPublisher
+from sawtooth_poet.poet_consensus.poet_block_verifier import PoetBlockVerifier
 
 
 LOGGER = logging.getLogger(__name__)
@@ -42,8 +43,18 @@ class PoetOracle:
             config_dir=config_dir,
             validator_id=validator_id)
 
+        self._verifier = PoetBlockVerifier(
+            block_cache=block_cache,
+            state_view_factory=state_view_factory,
+            data_dir=data_dir,
+            config_dir=config_dir,
+            validator_id=validator_id)
+
     def initialize_block(self, block):
         return self._publisher.initialize_block(block)
+
+    def verify_block(self, block):
+        return self._verifier.verify_block(block)
 
 
 class PoetBlock:
@@ -71,7 +82,7 @@ class _BlockCacheProxy:
         self._service = service
 
     def __getitem__(self, block_id):
-        return self._service.get_blocks([block_id])
+        return PoetBlock(self._service.get_blocks([block_id])[block_id])
 
 
 class _BlockStoreProxy:
