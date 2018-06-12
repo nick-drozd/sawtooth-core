@@ -15,9 +15,13 @@
 
 from collections.abc import MutableMapping
 from threading import RLock
+import logging
 import time
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class BlockCache(MutableMapping):

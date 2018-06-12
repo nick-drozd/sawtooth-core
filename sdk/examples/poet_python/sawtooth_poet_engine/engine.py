@@ -21,7 +21,7 @@ from sawtooth_sdk.consensus.engine import Engine
 from sawtooth_sdk.consensus import exceptions
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 
-from sawtooth_poet_engine.oracle import PoetOracle
+from sawtooth_poet_engine.oracle import PoetOracle, PoetBlock
 
 
 LOGGER = logging.getLogger(__name__)
@@ -33,6 +33,8 @@ class PoetEngine(Engine):
         self._service = None
         self._chain_head = None
         self._oracle = None
+
+        time.sleep(10)
 
     def name(self):
         return 'PoET'
@@ -46,7 +48,7 @@ class PoetEngine(Engine):
     def _initialize_block(self):
         chain_head = self._get_chain_head()
 
-        LOGGER.error('initialize_block -- got chain head')
+        LOGGER.warning('initialize_block -- got chain head')
 
         try:
             if self._oracle.initialize_block(chain_head):
@@ -55,7 +57,6 @@ class PoetEngine(Engine):
             else:
                 LOGGER.error('not initializing')
         except Exception as err:
-            # LOGGER.error('--> %s: %s', type(err), err)
             LOGGER.exception('_initialize_block')
 
     def _check_consensus(self, block):
@@ -71,12 +72,11 @@ class PoetEngine(Engine):
         self._service.fail_block(block_id)
 
     def _get_chain_head(self):
-        return _patch_block_fields(self._service.get_chain_head())
+        return PoetBlock(self._service.get_chain_head())
 
     def _get_block(self, block_id):
         LOGGER.warning('getting block')
-        return _patch_block_fields(
-            self._service.get_blocks([block_id]))
+        return PoetBlock(self._service.get_blocks([block_id]))
 
     def _commit_block(self, block_id):
         self._service.commit_block(block_id)
@@ -187,16 +187,3 @@ class PoetEngine(Engine):
         self._cancel_block()
 
         self._initialize_block()
-
-
-def _patch_block_fields(block):
-    '''Add PoET-required fields to consensus blocks.'''
-
-    block.identifier = block.block_id
-    block.previous_block_id = block.previous_id
-    block.signer_public_key = block.signer_id.hex()
-
-    # this is a trick
-    block.state_root_hash = block.block_id
-
-    return block

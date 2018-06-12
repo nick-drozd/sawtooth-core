@@ -46,6 +46,25 @@ class PoetOracle:
         return self._publisher.initialize_block(block)
 
 
+class PoetBlock:
+    def __init__(self, block):
+        # fields that come with consensus blocks
+        self.block_id = block.block_id
+        self.previous_id = block.previous_id
+        self.signer_id = block.signer_id
+        self.block_num = block.block_num
+        self.payload = block.payload
+        self.summary = block.summary
+
+        # fields that poet requires
+        self.identifier = block.block_id
+        self.previous_block_id = block.previous_id
+        self.signer_public_key = block.signer_id.hex()
+
+        # this is a trick
+        self.state_root_hash = block.block_id
+
+
 class _BlockCacheProxy:
     def __init__(self, service):
         self.block_store = _BlockStoreProxy(service)  # public
@@ -61,7 +80,7 @@ class _BlockStoreProxy:
 
     @property
     def chain_head(self):
-        return self._service.get_chain_head()
+        return PoetBlock(self._service.get_chain_head())
 
     # this needs a component endpoint
     def get_block_by_transaction_id(self, transaction_id):
@@ -73,7 +92,7 @@ class _BlockStoreProxy:
 
         # where does the chain head come from?
         # block or block_id?
-        chain_head = self._service.get_chain_head()
+        chain_head = self.chain_head
 
         yield chain_head
 
@@ -81,7 +100,8 @@ class _BlockStoreProxy:
 
         # assume chain_head is a block (else get the block)
         while curr.previous_id:
-            previous_block = self._service.get_blocks([curr.previous_id])
+            previous_block = PoetBlock(
+                self._service.get_blocks([curr.previous_id]))
 
             yield previous_block
 
@@ -106,9 +126,14 @@ class _StateViewProxy:
         self._block_id = block_id
 
     def get(self, address):
-        LOGGER.error('StateViewProxy.get -- address: %s', address)
-        result = self._service.get_state(self._block_id, [address])
+        LOGGER.error('StateViewProxy.get -- block_id: %s', self._block_id)
+
+        result = self._service.get_state(
+            block_id=self._block_id,
+            addresses=[address])
+
         LOGGER.error('StateViewProxy.get -- result: %s', result)
+
         return result[address]
 
     def leaves(self, prefix):

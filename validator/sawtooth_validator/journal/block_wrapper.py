@@ -13,10 +13,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 from enum import Enum
+import logging
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
 NULL_BLOCK_IDENTIFIER = "0000000000000000"
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class BlockStatus(Enum):
