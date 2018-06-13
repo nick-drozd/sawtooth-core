@@ -226,7 +226,16 @@ class _StateViewProxy:
         return result[address]
 
     def leaves(self, prefix):
-        return 'hello'
+        # is the service returning the right stuff?
+
+        result = self._service.get_state(
+            block_id=self._block_id,
+            addresses=[prefix])
+
+        return [
+            (address, data)
+            for address, data in result.items()
+        ]
 
 
 class _BatchPublisherProxy:
