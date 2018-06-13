@@ -27,7 +27,7 @@ from sawtooth_poet_engine.oracle import PoetOracle, PoetBlock
 LOGGER = logging.getLogger(__name__)
 
 POET_INITIALIZE = 1
-POET_PUBLISH = 0
+POET_PUBLISH = 1
 POET_VERIFY = 0
 POET_FORK = 0
 
@@ -145,9 +145,8 @@ class PoetEngine(Engine):
         try:
             # publishing is based on wait time
             publish = self._oracle.check_publish_block(None)
-        except:
+        except AttributeError:
             publish = False
-            LOGGER.exception('check_publish_block')
 
         if publish:
             LOGGER.error('poet publishing')
