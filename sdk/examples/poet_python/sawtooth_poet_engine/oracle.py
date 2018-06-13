@@ -131,8 +131,9 @@ class _BlockCacheProxy:
         self._service = service
 
     def __getitem__(self, block_id):
+        block_id = bytes.fromhex(block_id)
         try:
-            return PoetBlock(self._service.get_blocks([block_id.encode()])[block_id])
+            return PoetBlock(self._service.get_blocks([block_id])[block_id])
         except UnknownBlock:
             return None
 
@@ -163,15 +164,17 @@ class _BlockStoreProxy:
         header = BlockHeader()
         header.ParseFromString(block.header)
 
-        # consensus_block = ConsensusBlock(
-        #     block_id=bytes.fromhex(block.header_signature),
-        #     previous_id=bytes.fromhex(header.previous_block_id),
-        #     signer_id=bytes.fromhex(header.signer_public_key),
-        #     block_num=header.block_num,
-        #     payload=header.consensus,
-        #     summary=b'')
+        consensus_block = ConsensusBlock(
+            block_id=bytes.fromhex(block.header_signature),
+            previous_id=bytes.fromhex(header.previous_block_id),
+            signer_id=bytes.fromhex(header.signer_public_key),
+            block_num=header.block_num,
+            payload=header.consensus,
+            summary=b'')
 
-        # return PoetBlock(consensus_block)
+        poet_block = PoetBlock(consensus_block)
+
+        return poet_block
 
     def get_block_iter(self, reverse):
         # Ignore the reverse flag, since we can only get blocks
@@ -253,8 +256,6 @@ class _BatchPublisherProxy:
             message_type=Message.CLIENT_BATCH_SUBMIT_REQUEST,
             content=ClientBatchSubmitRequest(
                 batches=[batch]).SerializeToString())
-
-        LOGGER.warning('NOT SENDING: %s', batch)
 
 
 def _load_identity_signer(key_dir, key_name):
