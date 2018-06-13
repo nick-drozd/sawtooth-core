@@ -28,8 +28,8 @@ LOGGER = logging.getLogger(__name__)
 
 POET_INITIALIZE = 1
 POET_PUBLISH = 1
-POET_VERIFY = 0
-POET_FORK = 0
+POET_VERIFY = 1
+POET_FORK = 1
 
 
 class PoetEngine(Engine):
@@ -65,9 +65,9 @@ class PoetEngine(Engine):
             LOGGER.exception('_initialize_block')
 
         if initialize:
-            LOGGER.error('poet initialization')
+            LOGGER.warning('poet initialization')
         else:
-            LOGGER.error('not initializing')
+            LOGGER.warning('not initializing')
 
         self._service.initialize_block(chain_head.block_id)
 
@@ -76,10 +76,15 @@ class PoetEngine(Engine):
             return True
 
         try:
-            # --> NOT RETURNING <--
-            self._oracle.verify_block(block)
+            verify = self._oracle.verify_block(block)
         except:
+            verify = False
             LOGGER.exception('verify_block')
+
+        if verify:
+            LOGGER.warning('poet yes')
+        else:
+            LOGGER.warning('poet no')
 
         return True
 
@@ -90,7 +95,7 @@ class PoetEngine(Engine):
         try:
             return self._oracle.switch_forks(current_head, new_head)
         except TypeError as err:
-            LOGGER.error('%s', err)
+            LOGGER.error('PoET fork error: %s', err)
         except:
             LOGGER.exception('switch_forks')
 
@@ -149,9 +154,9 @@ class PoetEngine(Engine):
             publish = False
 
         if publish:
-            LOGGER.error('poet publishing')
+            LOGGER.warning('poet publishing')
         else:
-            LOGGER.error('not poet publishing')
+            LOGGER.warning('not poet publishing')
 
         return True
 
