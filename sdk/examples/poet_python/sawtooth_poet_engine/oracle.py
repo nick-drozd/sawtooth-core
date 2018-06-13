@@ -63,6 +63,12 @@ class PoetOracle:
     def initialize_block(self, block):
         return self._publisher.initialize_block(block)
 
+    def check_publish_block(self, block):
+        return self._publisher.check_publish_block(block)
+
+    def finalize_block(self, block):
+        return self._publisher.finalize_block(block)
+
     def verify_block(self, block):
         return self._verifier.verify_block(block)
 

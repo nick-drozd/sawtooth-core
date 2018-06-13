@@ -26,7 +26,8 @@ from sawtooth_poet_engine.oracle import PoetOracle, PoetBlock
 
 LOGGER = logging.getLogger(__name__)
 
-POET_INITIALIZE = 1
+POET_INITIALIZE = 0
+POET_PUBLISH = 0
 POET_VERIFY = 0
 POET_FORK = 0
 
@@ -63,7 +64,9 @@ class PoetEngine(Engine):
         except Exception as err:
             LOGGER.exception('_initialize_block')
 
-        if not initialize:
+        if initialize:
+            LOGGER.error('poet initialization')
+        else:
             LOGGER.error('not initializing')
 
         self._service.initialize_block(chain_head.block_id)
@@ -135,6 +138,22 @@ class PoetEngine(Engine):
         return block_id
 
     def _check_publish_block(self):
+        if not POET_PUBLISH:
+            return True
+
+        # this won't work if initialize hasn't been called
+        try:
+            # publishing is based on wait time
+            publish = self._oracle.check_publish_block(None)
+        except:
+            publish = False
+            LOGGER.exception('check_publish_block')
+
+        if publish:
+            LOGGER.error('poet publishing')
+        else:
+            LOGGER.error('not poet publishing')
+
         return True
 
     def start(self, updates, service, chain_head, peers):
