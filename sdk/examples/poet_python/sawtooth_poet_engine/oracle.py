@@ -28,10 +28,17 @@ from sawtooth_signing import CryptoFactory
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_sdk.protobuf.validator_pb2 import Message
-from sawtooth_validator.protobuf.batch_pb2 import Batch
-from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
-from sawtooth_validator.protobuf.client_batch_submit_pb2 \
+
+from sawtooth_sdk.protobuf.batch_pb2 import Batch
+from sawtooth_sdk.protobuf.batch_pb2 import BatchHeader
+from sawtooth_sdk.protobuf.client_batch_submit_pb2 \
     import ClientBatchSubmitRequest
+from sawtooth_sdk.protobuf.client_block_pb2 \
+    import ClientBlockGetByTransactionIdRequest
+from sawtooth_sdk.protobuf.client_block_pb2 \
+    import ClientBlockGetResponse
+from sawtooth_sdk.protobuf.block_pb2 import BlockHeader
+from sawtooth_sdk.protobuf.consensus_pb2 import ConsensusBlock
 
 
 LOGGER = logging.getLogger(__name__)

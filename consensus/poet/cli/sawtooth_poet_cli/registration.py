@@ -34,8 +34,8 @@ from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
-import sawtooth_validator.protobuf.batch_pb2 as batch_pb
+import sawtooth_sdk.protobuf.transaction_pb2 as txn_pb
+import sawtooth_sdk.protobuf.batch_pb2 as batch_pb
 from sawtooth_validator.state.settings_view import SettingsView
 
 VR_NAMESPACE = sha256('validator_registry'.encode()).hexdigest()[0:6]
