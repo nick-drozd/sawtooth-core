@@ -293,7 +293,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         active_poet_public_key = self._poet_key_state_store.active_key
         if validator_info is None:
             if active_poet_public_key is None:
-                LOGGER.debug(
+                LOGGER.error(
                     'No public key found, so going to register new signup '
                     'information')
                 self._register_signup_information(
@@ -334,7 +334,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # new signup information as we have no way whatsoever to publish
         # blocks that other validators will accept.
         if poet_key_state is None:
-            LOGGER.debug(
+            LOGGER.error(
                 'PoET public key %s...%s in validator registry not found in '
                 'key state store.  Sign up again',
                 validator_info.signup_info.poet_public_key[:8],
@@ -362,7 +362,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # waiting until our PoET public key is updated in the validator
         # registry and therefore we cannot publish any blocks.
         if poet_key_state.has_been_refreshed:
-            LOGGER.debug(
+            LOGGER.error(
                 'PoET public key %s...%s has been refreshed.  Wait for new '
                 'key to show up in validator registry.',
                 validator_info.signup_info.poet_public_key[:8],
@@ -550,7 +550,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         self._wait_timer = wait_timer
         PoetBlockPublisher._previous_block_id = None
 
-        LOGGER.debug('Created wait timer: %s', self._wait_timer)
+        LOGGER.error('Created wait timer: %s', self._wait_timer)
 
         return True
 
@@ -618,6 +618,6 @@ class PoetBlockPublisher(BlockPublisherInterface):
             LOGGER.error('Failed to create wait certificate: %s', ve)
             return False
 
-        LOGGER.debug('Created wait certificate: %s', wait_certificate)
+        LOGGER.error('Created wait certificate: %s', wait_certificate)
 
         return True
