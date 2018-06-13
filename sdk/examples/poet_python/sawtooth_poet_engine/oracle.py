@@ -19,6 +19,8 @@ from sawtooth_poet.poet_consensus.poet_block_publisher import PoetBlockPublisher
 from sawtooth_poet.poet_consensus.poet_block_verifier import PoetBlockVerifier
 from sawtooth_poet.poet_consensus.poet_fork_resolver import PoetForkResolver
 
+from sawtooth_sdk.consensus.exceptions import UnknownBlock
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -101,7 +103,10 @@ class _BlockCacheProxy:
         self._service = service
 
     def __getitem__(self, block_id):
-        return PoetBlock(self._service.get_blocks([block_id])[block_id])
+        try:
+            return PoetBlock(self._service.get_blocks([block_id.encode()])[block_id])
+        except UnknownBlock:
+            return None
 
 
 class _BlockStoreProxy:
@@ -130,8 +135,11 @@ class _BlockStoreProxy:
 
         # assume chain_head is a block (else get the block)
         while curr.previous_id:
-            previous_block = PoetBlock(
-                self._service.get_blocks([curr.previous_id]))
+            try:
+                previous_block = PoetBlock(
+                    self._service.get_blocks([curr.previous_id])[curr.previous_id])
+            except UnknownBlock:
+                return
 
             yield previous_block
 
@@ -167,7 +175,13 @@ class _StateViewProxy:
 
 
 class _BatchPublisherProxy:
-    # this needs a signer
+    def __init__(self):
+        self.identity_signer = _DummySigner()
 
     def send(self, transactions):
+        pass
+
+
+class _DummySigner:
+    def sign(self, header):
         pass

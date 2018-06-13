@@ -59,14 +59,14 @@ class PoetEngine(Engine):
             return
 
         try:
-            if self._oracle.initialize_block(chain_head):
-                LOGGER.error('initializing')
-                self._service.initialize_block(chain_head)
-            else:
-                LOGGER.error('not initializing')
+            initialize = self._oracle.initialize_block(chain_head)
         except Exception as err:
             LOGGER.exception('_initialize_block')
-            raise
+
+        if not initialize:
+            LOGGER.error('not initializing')
+
+        self._service.initialize_block(chain_head.block_id)
 
     def _check_consensus(self, block):
         if not POET_VERIFY:
@@ -143,7 +143,10 @@ class PoetEngine(Engine):
 
         self._oracle = PoetOracle(service)
 
-        self._initialize_block()
+        try:
+            self._initialize_block()
+        except:
+            LOGGER.exception('after initialize')
 
         # 1. Wait for an incoming message.
         # 2. Cnheck for exit.
