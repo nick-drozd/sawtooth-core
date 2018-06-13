@@ -21,10 +21,17 @@ from sawtooth_poet.poet_consensus.poet_block_verifier import PoetBlockVerifier
 from sawtooth_poet.poet_consensus.poet_fork_resolver import PoetForkResolver
 
 from sawtooth_sdk.consensus.exceptions import UnknownBlock
+from sawtooth_sdk.messaging.stream import Stream
 
 import sawtooth_signing as signing
 from sawtooth_signing import CryptoFactory
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
+
+from sawtooth_sdk.protobuf.validator_pb2 import Message
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
+from sawtooth_validator.protobuf.client_batch_submit_pb2 \
+    import ClientBatchSubmitRequest
 
 
 LOGGER = logging.getLogger(__name__)
@@ -189,19 +196,36 @@ class _BatchPublisherProxy:
     def __init__(self):
         # these should be passed in
         key_dir, key_name = '/etc/sawtooth/keys', 'validator'
+        component_endpoint = 'tcp://validator-0:4004'
 
-        self.identity_signer = load_identity_signer(key_dir, key_name)
+        self._stream = Stream(component_endpoint)
+
+        self.identity_signer = _load_identity_signer(key_dir, key_name)
 
     def send(self, transactions):
-        pass
+        txn_signatures = [txn.header_signature for txn in transactions]
+
+        header = BatchHeader(
+            signer_public_key=self.identity_signer.get_public_key().as_hex(),
+            transaction_ids=txn_signatures
+        ).SerializeToString()
+
+        signature = self.identity_signer.sign(header)
+
+        batch = Batch(
+            header=header,
+            transactions=transactions,
+            header_signature=signature)
+
+        self._stream.send(
+            message_type=Message.CLIENT_BATCH_SUBMIT_REQUEST,
+            content=ClientBatchSubmitRequest(
+                batches=[batch]).SerializeToString())
+
+        LOGGER.warning('NOT SENDING: %s', batch)
 
 
-class _DummySigner:
-    def sign(self, header):
-        pass
-
-
-def load_identity_signer(key_dir, key_name):
+def _load_identity_signer(key_dir, key_name):
     """Loads a private key from the key directory, based on a validator's
     identity.
 
