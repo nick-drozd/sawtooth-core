@@ -46,16 +46,19 @@ LOGGER = logging.getLogger(__name__)
 
 class PoetOracle:
     def __init__(self, service):
-        block_cache = _BlockCacheProxy(service)
-        state_view_factory = _StateViewFactoryProxy(service)
-
-        # this needs a component endpoint (?)
-        batch_publisher = _BatchPublisherProxy()
-
         # these should eventually be passed in
         data_dir = '/var/lib/sawtooth/'
         config_dir = '/etc/sawtooth/'
         validator_id = 'this-should-be-the-validator-public-key'
+        component_endpoint = 'tcp://validator-0:4004'
+
+        stream = Stream(component_endpoint)
+
+        block_cache = _BlockCacheProxy(service, stream)
+        state_view_factory = _StateViewFactoryProxy(service)
+
+        # this needs a component endpoint (?)
+        batch_publisher = _BatchPublisherProxy(stream)
 
         self._publisher = PoetBlockPublisher(
             block_cache=block_cache,
@@ -123,8 +126,8 @@ class _DummyHeader:
 
 
 class _BlockCacheProxy:
-    def __init__(self, service):
-        self.block_store = _BlockStoreProxy(service)  # public
+    def __init__(self, service, stream):
+        self.block_store = _BlockStoreProxy(service, stream)  # public
         self._service = service
 
     def __getitem__(self, block_id):
@@ -135,8 +138,9 @@ class _BlockCacheProxy:
 
 
 class _BlockStoreProxy:
-    def __init__(self, service):
+    def __init__(self, service, stream):
         self._service = service
+        self._stream = stream
 
     @property
     def chain_head(self):
@@ -144,7 +148,30 @@ class _BlockStoreProxy:
 
     # this needs a component endpoint
     def get_block_by_transaction_id(self, transaction_id):
-        pass
+        future = self._stream.send(
+            message_type=Message.CLIENT_BLOCK_GET_BY_TRANSACTION_ID_REQUEST,
+            content=ClientBlockGetByTransactionIdRequest(
+                transaction_id=transaction_id).SerializeToString())
+
+        content = future.result().content
+
+        response = ClientBlockGetResponse()
+        response.ParseFromString(content)
+
+        block = response.block
+
+        header = BlockHeader()
+        header.ParseFromString(block.header)
+
+        # consensus_block = ConsensusBlock(
+        #     block_id=bytes.fromhex(block.header_signature),
+        #     previous_id=bytes.fromhex(header.previous_block_id),
+        #     signer_id=bytes.fromhex(header.signer_public_key),
+        #     block_num=header.block_num,
+        #     payload=header.consensus,
+        #     summary=b'')
+
+        # return PoetBlock(consensus_block)
 
     def get_block_iter(self, reverse):
         # Ignore the reverse flag, since we can only get blocks
@@ -200,14 +227,12 @@ class _StateViewProxy:
 
 
 class _BatchPublisherProxy:
-    def __init__(self):
+    def __init__(self, stream):
         # these should be passed in
         key_dir, key_name = '/etc/sawtooth/keys', 'validator'
-        component_endpoint = 'tcp://validator-0:4004'
-
-        self._stream = Stream(component_endpoint)
 
         self.identity_signer = _load_identity_signer(key_dir, key_name)
+        self._stream = stream
 
     def send(self, transactions):
         txn_signatures = [txn.header_signature for txn in transactions]
