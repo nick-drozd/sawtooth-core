@@ -15,6 +15,9 @@
 
 version: "2.1"
 
+volumes:
+  sawtooth-keys:
+
 services:
 
   test-poet-engine:
@@ -53,6 +56,7 @@ services:
     image: sawtooth-validator:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys:/etc/sawtooth/keys
     expose:
       - 4004
       - 8800
@@ -95,50 +99,11 @@ services:
         /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
-  # validator-1:
-  #   image: sawtooth-validator:$ISOLATION_ID
-  #   volumes:
-  #     - $SAWTOOTH_CORE:/project/sawtooth-core
-  #   expose:
-  #     - 4004
-  #     - 8800
-  #   command: "bash -c \"\
-  #       sawadm keygen && \
-  #       sawtooth-validator \
-  #           --endpoint tcp://validator-1:8800 \
-  #           --bind component:tcp://eth0:4004 \
-  #           --bind network:tcp://eth0:8800 \
-  #           --bind consensus:tcp://eth0:5005 \
-  #           --peering dynamic \
-  #           --seeds tcp://validator-0:8800 \
-  #           --scheduler parallel \
-  #   \""
-  #   stop_signal: SIGKILL
-
-  # validator-2:
-  #   image: sawtooth-validator:$ISOLATION_ID
-  #   volumes:
-  #     - $SAWTOOTH_CORE:/project/sawtooth-core
-  #   expose:
-  #     - 4004
-  #     - 8800
-  #   command: "bash -c \"\
-  #       sawadm keygen && \
-  #       sawtooth-validator \
-  #           --endpoint tcp://validator-2:8800 \
-  #           --bind component:tcp://eth0:4004 \
-  #           --bind network:tcp://eth0:8800 \
-  #           --bind consensus:tcp://eth0:5005 \
-  #           --peering dynamic \
-  #           --seeds tcp://validator-0:8800 \
-  #           --scheduler parallel \
-  #   \""
-  #   stop_signal: SIGKILL
-
   poet-0:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys:/etc/sawtooth/keys/
     command: poet-python --connect tcp://validator-0:5005 -vv
     stop_signal: SIGKILL
     environment:
