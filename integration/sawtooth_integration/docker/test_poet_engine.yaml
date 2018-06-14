@@ -63,6 +63,7 @@ services:
       - 5005
     working_dir: /root
     command: "bash -c \"\
+        cp /project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/validator-0.toml /etc/sawtooth/validator.toml && \
         sawadm keygen --force && \
         sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
