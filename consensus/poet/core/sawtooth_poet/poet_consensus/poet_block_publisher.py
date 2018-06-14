@@ -580,13 +580,6 @@ class PoetBlockPublisher(BlockPublisherInterface):
             Boolean: True if the candidate block good and should be generated.
             False if the block should be abandoned.
         """
-        # To compute the block hash, we are going to perform a hash using the
-        # previous block ID and the batch IDs contained in the block
-        hasher = hashlib.sha256(block_header.previous_block_id.encode())
-        for batch_id in block_header.batch_ids:
-            hasher.update(batch_id.encode())
-        block_hash = hasher.hexdigest()
-
         # Using the current chain head, we need to create a state view so we
         # can create a PoET enclave.
         state_view = \
@@ -602,6 +595,9 @@ class PoetBlockPublisher(BlockPublisherInterface):
 
         # We need to create a wait certificate for the block and then serialize
         # that into the block header consensus field.
+
+        # NOTE: "block_header" is really the block summary
+
         active_key = self._poet_key_state_store.active_key
         poet_key_state = self._poet_key_state_store[active_key]
         sealed_signup_data = poet_key_state.sealed_signup_data
@@ -611,13 +607,10 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     poet_enclave_module=poet_enclave_module,
                     sealed_signup_data=sealed_signup_data,
                     wait_timer=self._wait_timer,
-                    block_hash=block_hash)
-            block_header.consensus = \
-                json.dumps(wait_certificate.dump()).encode()
+                    block_hash=block_header)
+            consensus = json.dumps(wait_certificate.dump()).encode()
+            LOGGER.error('Created wait certificate: %s', wait_certificate)
+            return consensus
         except ValueError as ve:
             LOGGER.error('Failed to create wait certificate: %s', ve)
             return False
-
-        LOGGER.error('Created wait certificate: %s', wait_certificate)
-
-        return True

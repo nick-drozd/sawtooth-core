@@ -27,9 +27,10 @@ from sawtooth_poet_engine.oracle import PoetOracle, PoetBlock
 LOGGER = logging.getLogger(__name__)
 
 POET_INITIALIZE = 1
-POET_PUBLISH = 1
-POET_VERIFY = 1
-POET_FORK = 1
+POET_PUBLISH = 0
+POET_FINALIZE = 0
+POET_VERIFY = 0
+POET_FORK = 0
 
 
 class PoetEngine(Engine):
@@ -134,20 +135,36 @@ class PoetEngine(Engine):
             LOGGER.warning(err)
             return None
 
-    def _finalize_block(self, data):
+    def _finalize_block(self):
         time.sleep(1)
+
+        summary = self._summarize_block()
+
+        if summary is None:
+            LOGGER.warning('No summary available')
+            return None
+
+        if POET_FINALIZE:
+            try:
+                consensus = self._oracle.finalize_block(summary)
+            except:
+                LOGGER.exception('finalize')
+
+            if not consensus:
+                return None
+        else:
+            consensus = summary
 
         while True:
             try:
-                block_id = self._service.finalize_block(data)
-                break
+                block_id = self._service.finalize_block(consensus)
+                LOGGER.error('finalized %s', block_id)
+                return block_id
             except exceptions.BlockNotReady:
                 time.sleep(1)
                 continue
             except exceptions.InvalidState:
                 return None
-
-        return block_id
 
     def _check_publish_block(self):
         if not POET_PUBLISH:
@@ -209,11 +226,7 @@ class PoetEngine(Engine):
                 break
 
             if self._check_publish_block():
-                summary = self._summarize_block()
-
-                if summary is not None:
-                    LOGGER.error('summary: %s', summary)
-                    self._finalize_block(summary)
+                self._finalize_block()
 
     def _handle_new_block(self, block):
         block = PoetBlock(block)
