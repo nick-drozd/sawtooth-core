@@ -71,7 +71,10 @@ class PoetOracle:
         return self._publisher.initialize_block(block)
 
     def check_publish_block(self, block):
-        return self._publisher.check_publish_block(block)
+        try:
+            return self._publisher.check_publish_block(block)
+        except:
+            LOGGER.exception('oracle.check_publish_block')
 
     def finalize_block(self, block):
         return self._publisher.finalize_block(block)

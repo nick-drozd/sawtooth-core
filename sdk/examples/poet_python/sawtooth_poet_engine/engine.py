@@ -35,9 +35,14 @@ POET_FORK = 0
 
 class PoetEngine(Engine):
     def __init__(self):
-        self._exit = False
+        # components
         self._service = None
         self._oracle = None
+
+        # state variables
+        self._exit = False
+        self._published = False
+        self._building = False
 
         time.sleep(10)
 
@@ -55,20 +60,26 @@ class PoetEngine(Engine):
 
         if not POET_INITIALIZE:
             self._service.initialize_block(chain_head.block_id)
-            return
+            return True
 
         try:
             initialize = self._oracle.initialize_block(chain_head)
+        except exceptions.InvalidState as err:
+            LOGGER.warning(err)
+            return False
         except Exception as err:
             LOGGER.exception('_initialize_block')
+            return False
 
         if initialize:
-            LOGGER.warning('poet initialization')
-            # self._service.initialize_block(chain_head.block_id)
+            LOGGER.warning('initialize succeeded')
+            self._service.initialize_block(chain_head.block_id)
         else:
-            LOGGER.warning('not initializing')
+            LOGGER.warning('initialization failed')
 
-        self._service.initialize_block(chain_head.block_id)
+        return initialize
+
+        # self._service.initialize_block(chain_head.block_id)
 
     def _check_consensus(self, block):
         if not POET_VERIFY:
@@ -187,13 +198,7 @@ class PoetEngine(Engine):
 
     def start(self, updates, service, chain_head, peers):
         self._service = service
-
         self._oracle = PoetOracle(service)
-
-        try:
-            self._initialize_block()
-        except:
-            LOGGER.exception('after initialize')
 
         # 1. Wait for an incoming message.
         # 2. Cnheck for exit.
@@ -219,13 +224,31 @@ class PoetEngine(Engine):
                     handle_message(data)
 
             except queue.Empty:
-                LOGGER.warning('empty queue')
+                LOGGER.debug('empty queue')
 
             if self._exit:
                 break
 
-            if self._check_publish_block():
-                self._finalize_block()
+            ##########
+
+            # publisher activity #
+
+            if self._published:
+                LOGGER.warning('already published at this height')
+                continue
+
+            if not self._building:
+                LOGGER.warning('not building: attempting to initialize')
+                if self._initialize_block():
+                    self._building = True
+
+            if self._building:
+                LOGGER.warning('building: attempting to publish')
+                if self._check_publish_block():
+                    LOGGER.warning('finalizing block')
+                    self._finalize_block()
+                    self._published = True
+                    self._building = False
 
     def _handle_new_block(self, block):
         block = PoetBlock(block)
@@ -265,4 +288,5 @@ class PoetEngine(Engine):
 
         self._cancel_block()
 
-        self._initialize_block()
+        self._building = False
+        self._published = False
