@@ -115,6 +115,9 @@ def do_create(args):
     """
     signer = _read_signer(args.key)
     public_key = signer.get_public_key().as_hex()
+    print('--> registration public key:', public_key)
+    print('--> registration config dir:', config.get_config_dir())
+    print('--> registration data dir:', config.get_data_dir())
 
     public_key_hash = sha256(public_key.encode()).hexdigest()
     nonce = SignupInfo.block_id_to_nonce(args.block)

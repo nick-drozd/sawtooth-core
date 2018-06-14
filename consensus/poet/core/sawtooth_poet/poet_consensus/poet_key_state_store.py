@@ -107,7 +107,7 @@ class PoetKeyStateStore(MutableMapping):
                         'poet-key-state-{}.lmdb'.format(
                             validator_id[:8]))
 
-                LOGGER.debug('Create PoET key state store: %s', db_file_name)
+                LOGGER.error('Create PoET key state store: %s', db_file_name)
 
                 self._store_db = \
                     LMDBNoLockDatabase(

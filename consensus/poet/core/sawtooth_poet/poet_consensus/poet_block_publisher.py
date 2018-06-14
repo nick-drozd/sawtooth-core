@@ -325,11 +325,12 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # validator registry entry.
         poet_key_state = None
         try:
+            LOGGER.error(validator_info.signup_info.poet_public_key)
             poet_key_state = \
                 self._poet_key_state_store[
                     validator_info.signup_info.poet_public_key]
         except (ValueError, KeyError) as err:
-            LOGGER.exception('poet key state')
+            LOGGER.exception('poet key state fuckup')
             pass
 
         # If there is no key state associated with the PoET public key that
