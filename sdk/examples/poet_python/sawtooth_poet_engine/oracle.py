@@ -49,7 +49,11 @@ class PoetOracle:
         # these should eventually be passed in
         self._data_dir = '/var/lib/sawtooth/'
         self._config_dir = '/etc/sawtooth/'
-        self._validator_id = 'this-should-be-the-validator-public-key'
+        try:
+            self._validator_id = _load_identity_signer(
+                '/etc/sawtooth/keys', 'validator').get_public_key().as_hex()
+        except:
+            LOGGER.exception('loading key fuckup')
         component_endpoint = 'tcp://validator-0:4004'
 
         stream = Stream(component_endpoint)

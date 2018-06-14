@@ -17,6 +17,7 @@ version: "2.1"
 
 volumes:
   sawtooth-keys:
+  sawtooth-db:
 
 services:
 
@@ -57,6 +58,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
       - sawtooth-keys:/etc/sawtooth/keys
+      - sawtooth-db:/var/lib/sawtooth
     expose:
       - 4004
       - 8800
@@ -104,7 +106,8 @@ services:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-      - sawtooth-keys:/etc/sawtooth/keys/
+      - sawtooth-keys:/etc/sawtooth/keys
+      - sawtooth-db:/var/lib/sawtooth
     command: poet-python --connect tcp://validator-0:5005 -vv
     stop_signal: SIGKILL
     environment:
