@@ -224,6 +224,7 @@ class PoetEngine(Engine):
                     handle_message(data)
 
             except queue.Empty:
+                pass
                 LOGGER.debug('empty queue')
 
             if self._exit:

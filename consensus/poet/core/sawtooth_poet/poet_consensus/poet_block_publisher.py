@@ -257,6 +257,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # that the validator can go do something more useful.
         if block_header.previous_block_id == \
                 PoetBlockPublisher._previous_block_id:
+            LOGGER.error('wrong previous_block_id')
             return False
         PoetBlockPublisher._previous_block_id = block_header.previous_block_id
 
@@ -301,11 +302,12 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     poet_enclave_module=poet_enclave_module)
             else:  # Check if we need to give up on this registration attempt
                 try:
+                    LOGGER.error('nonce')
                     nonce = self._poet_key_state_store[
                         active_poet_public_key].signup_nonce
                 except (ValueError, AttributeError):
                     self._poet_key_state_store.active_key = None
-                    LOGGER.warning('Poet Key State Store had inaccessible or '
+                    LOGGER.error('Poet Key State Store had inaccessible or '
                                    'corrupt active key [%s] clearing '
                                    'key.', active_poet_public_key)
                     return False
@@ -326,7 +328,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
             poet_key_state = \
                 self._poet_key_state_store[
                     validator_info.signup_info.poet_public_key]
-        except (ValueError, KeyError):
+        except (ValueError, KeyError) as err:
+            LOGGER.exception('poet key state')
             pass
 
         # If there is no key state associated with the PoET public key that
@@ -427,7 +430,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 validator_info=validator_info,
                 poet_settings_view=poet_settings_view,
                 block_cache=self._block_cache):
-            LOGGER.info(
+            LOGGER.error(
                 'Reject building on block %s: Validator signup information '
                 'not committed in a timely manner.',
                 block_header.previous_block_id[:8])
@@ -453,7 +456,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
             # validators.
             poet_key_state = self._poet_key_state_store[active_poet_public_key]
             if not poet_key_state.has_been_refreshed:
-                LOGGER.info(
+                LOGGER.error(
                     'Reached block claim limit for key: %s...%s',
                     active_poet_public_key[:8],
                     active_poet_public_key[-8:])
@@ -480,7 +483,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     block_header=block_header,
                     poet_enclave_module=poet_enclave_module)
 
-            LOGGER.info(
+            LOGGER.error(
                 'Reject building on block %s: Validator has reached maximum '
                 'number of blocks with key pair.',
                 block_header.previous_block_id[:8])
@@ -495,7 +498,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 validator_registry_view=validator_registry_view,
                 poet_settings_view=poet_settings_view,
                 block_store=self._block_cache.block_store):
-            LOGGER.info(
+            LOGGER.error(
                 'Reject building on block %s: Validator has not waited long '
                 'enough since registering validator information.',
                 block_header.previous_block_id[:8])
@@ -535,7 +538,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     poet_settings_view=poet_settings_view),
                 block_cache=self._block_cache,
                 poet_enclave_module=poet_enclave_module):
-            LOGGER.info(
+            LOGGER.error(
                 'Reject building on block %s: '
                 'Validator (signing public key: %s) is claiming blocks '
                 'too frequently.',
