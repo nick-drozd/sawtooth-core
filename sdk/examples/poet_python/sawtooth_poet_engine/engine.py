@@ -54,8 +54,6 @@ class PoetEngine(Engine):
     def _initialize_block(self):
         chain_head = self._get_chain_head()
 
-        LOGGER.debug('initialize_block -- got chain head')
-
         if not POET_INITIALIZE:
             self._service.initialize_block(chain_head.block_id)
             return
@@ -112,8 +110,6 @@ class PoetEngine(Engine):
         return PoetBlock(self._service.get_chain_head())
 
     def _get_block(self, block_id):
-        LOGGER.debug('getting block')
-
         return PoetBlock(self._service.get_blocks([block_id])[block_id])
 
     def _commit_block(self, block_id):
@@ -158,7 +154,7 @@ class PoetEngine(Engine):
         while True:
             try:
                 block_id = self._service.finalize_block(consensus)
-                LOGGER.error('finalized %s', block_id)
+                LOGGER.info('finalized %s with %s', block_id, consensus)
                 return block_id
             except exceptions.BlockNotReady:
                 time.sleep(1)
@@ -210,7 +206,6 @@ class PoetEngine(Engine):
         while True:
             try:
                 type_tag, data = updates.get(timeout=1)
-                LOGGER.debug('got %s', type_tag)
 
                 try:
                     handle_message = handlers[type_tag]
@@ -243,26 +238,26 @@ class PoetEngine(Engine):
     def _handle_valid_block(self, block_id):
         block = self._get_block(block_id)
 
-        self._chain_head = self._get_chain_head()
+        chain_head = self._get_chain_head()
 
         LOGGER.info(
             'Choosing between chain heads -- current: %s -- new: %s',
-            self._chain_head,
+            chain_head.block_id,
             block_id)
 
         if self._switch_forks(self._chain_head, block):
-            LOGGER.info('Committing %s', block)
+            LOGGER.info('Committing %s', block_id)
             self._commit_block(block_id)
         else:
-            LOGGER.info('Ignoring %s', block)
+            LOGGER.info('Ignoring %s', block_id)
             self._ignore_block(block_id)
 
     def _handle_committed_block(self, _block_id):
-        self._chain_head = self._get_chain_head()
+        chain_head = self._get_chain_head()
 
         LOGGER.info(
             'Chain head updated to %s, abandoning block in progress',
-            self._chain_head)
+            chain_head.block_id)
 
         self._cancel_block()
 
