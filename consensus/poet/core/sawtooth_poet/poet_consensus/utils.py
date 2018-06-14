@@ -60,7 +60,8 @@ def deserialize_wait_certificate(block, poet_enclave_module):
                     poet_enclave_module=poet_enclave_module,
                     serialized=wait_certificate_dict['SerializedCertificate'],
                     signature=wait_certificate_dict['Signature'])
-        except (json.decoder.JSONDecodeError, KeyError):
+        except (json.decoder.JSONDecodeError, UnicodeDecodeError, KeyError) as err:
+            LOGGER.warning(err)
             pass
 
     return wait_certificate

@@ -127,12 +127,19 @@ class PoetEngine(Engine):
         except exceptions.InvalidState:
             pass
 
-    def _finalize_block(self):
+    def _summarize_block(self):
+        try:
+            return self._service.summarize_block()
+        except (exceptions.InvalidState, exceptions.BlockNotReady) as err:
+            LOGGER.warning(err)
+            return None
+
+    def _finalize_block(self, data):
         time.sleep(1)
 
         while True:
             try:
-                block_id = self._service.finalize_block(b'consensus')
+                block_id = self._service.finalize_block(data)
                 break
             except exceptions.BlockNotReady:
                 time.sleep(1)
@@ -202,7 +209,11 @@ class PoetEngine(Engine):
                 break
 
             if self._check_publish_block():
-                self._finalize_block()
+                summary = self._summarize_block()
+
+                if summary is not None:
+                    LOGGER.error('summary: %s', summary)
+                    self._finalize_block(summary)
 
     def _handle_new_block(self, block):
         block = PoetBlock(block)
