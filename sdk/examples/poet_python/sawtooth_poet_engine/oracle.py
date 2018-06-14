@@ -47,56 +47,59 @@ LOGGER = logging.getLogger(__name__)
 class PoetOracle:
     def __init__(self, service):
         # these should eventually be passed in
-        data_dir = '/var/lib/sawtooth/'
-        config_dir = '/etc/sawtooth/'
-        validator_id = 'this-should-be-the-validator-public-key'
+        self._data_dir = '/var/lib/sawtooth/'
+        self._config_dir = '/etc/sawtooth/'
+        self._validator_id = 'this-should-be-the-validator-public-key'
         component_endpoint = 'tcp://validator-0:4004'
 
         stream = Stream(component_endpoint)
 
-        block_cache = _BlockCacheProxy(service, stream)
-        state_view_factory = _StateViewFactoryProxy(service)
+        self._block_cache = _BlockCacheProxy(service, stream)
+        self._state_view_factory = _StateViewFactoryProxy(service)
 
-        # this needs a component endpoint (?)
-        batch_publisher = _BatchPublisherProxy(stream)
+        self._batch_publisher = _BatchPublisherProxy(stream)
 
-        self._publisher = PoetBlockPublisher(
-            block_cache=block_cache,
-            state_view_factory=state_view_factory,
-            batch_publisher=batch_publisher,
-            data_dir=data_dir,
-            config_dir=config_dir,
-            validator_id=validator_id)
-
-        self._verifier = PoetBlockVerifier(
-            block_cache=block_cache,
-            state_view_factory=state_view_factory,
-            data_dir=data_dir,
-            config_dir=config_dir,
-            validator_id=validator_id)
-
-        self._fork_resolver = PoetForkResolver(
-            block_cache=block_cache,
-            state_view_factory=state_view_factory,
-            data_dir=data_dir,
-            config_dir=config_dir,
-            validator_id=validator_id)
+    def _make_publisher(self):
+        return PoetBlockPublisher(
+            block_cache=self._block_cache,
+            state_view_factory=self._state_view_factory,
+            batch_publisher=self._batch_publisher,
+            data_dir=self._data_dir,
+            config_dir=self._config_dir,
+            validator_id=self._validator_id)
 
     def initialize_block(self, block):
-        return self._publisher.initialize_block(block)
+        publisher = self._make_publisher()
+        return publisher.initialize_block(block)
 
     def check_publish_block(self, block):
-        return self._publisher.check_publish_block(block)
+        publisher = self._make_publisher()
+        return publisher.check_publish_block(block)
 
     def finalize_block(self, block):
-        return self._publisher.finalize_block(block)
+        publisher = self._make_publisher()
+        return publisher.finalize_block(block)
 
     def verify_block(self, block):
-        return self._verifier.verify_block(block)
+        verifier = PoetBlockVerifier(
+            block_cache=self._block_cache,
+            state_view_factory=self._state_view_factory,
+            data_dir=self._data_dir,
+            config_dir=self._config_dir,
+            validator_id=self._validator_id)
+
+        return verifier.verify_block(block)
 
     def switch_forks(self, cur_fork_head, new_fork_head):
         '''"compare_forks" is not an intuitive name.'''
-        return self._fork_resolver.compare_forks(cur_fork_head, new_fork_head)
+        fork_resolver = PoetForkResolver(
+            block_cache=self._block_cache,
+            state_view_factory=self._state_view_factory,
+            data_dir=self._data_dir,
+            config_dir=self._config_dir,
+            validator_id=self._validator_id)
+
+        return fork_resolver.compare_forks(cur_fork_head, new_fork_head)
 
 
 class PoetBlock:
