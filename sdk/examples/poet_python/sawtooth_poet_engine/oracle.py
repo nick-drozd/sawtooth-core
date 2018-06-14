@@ -59,8 +59,8 @@ class PoetOracle:
 
         self._batch_publisher = _BatchPublisherProxy(stream)
 
-    def _make_publisher(self):
-        return PoetBlockPublisher(
+    def initialize_block(self, block):
+        self._publisher = PoetBlockPublisher(
             block_cache=self._block_cache,
             state_view_factory=self._state_view_factory,
             batch_publisher=self._batch_publisher,
@@ -68,17 +68,13 @@ class PoetOracle:
             config_dir=self._config_dir,
             validator_id=self._validator_id)
 
-    def initialize_block(self, block):
-        publisher = self._make_publisher()
-        return publisher.initialize_block(block)
+        return self._publisher.initialize_block(block)
 
     def check_publish_block(self, block):
-        publisher = self._make_publisher()
-        return publisher.check_publish_block(block)
+        return self._publisher.check_publish_block(block)
 
     def finalize_block(self, block):
-        publisher = self._make_publisher()
-        return publisher.finalize_block(block)
+        return self._publisher.finalize_block(block)
 
     def verify_block(self, block):
         verifier = PoetBlockVerifier(
