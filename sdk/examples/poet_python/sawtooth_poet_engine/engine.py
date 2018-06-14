@@ -30,7 +30,7 @@ POET_INITIALIZE = 1
 POET_PUBLISH = 0
 POET_FINALIZE = 0
 POET_VERIFY = 0
-POET_FORK = 1
+POET_FORK = 0
 
 
 class PoetEngine(Engine):
@@ -180,7 +180,7 @@ class PoetEngine(Engine):
         else:
             LOGGER.warning('not poet publishing')
 
-        return True
+        return publish
 
     def start(self, updates, service, chain_head, peers):
         self._service = service

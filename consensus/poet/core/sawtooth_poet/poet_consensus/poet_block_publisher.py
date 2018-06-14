@@ -548,6 +548,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # policies.
 
         self._wait_timer = wait_timer
+        LOGGER.error(self._wait_timer)
         PoetBlockPublisher._previous_block_id = None
 
         LOGGER.error('Created wait timer: %s', self._wait_timer)
@@ -566,6 +567,10 @@ class PoetBlockPublisher(BlockPublisherInterface):
         """
 
         # Only claim readiness if the wait timer has expired
+        if self._wait_timer is None:
+            LOGGER.warning('check_publish_block: self._wait_timer is None')
+            return False
+
         return self._wait_timer.has_expired(now=time.time())
 
     def finalize_block(self, block_header):
