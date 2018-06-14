@@ -15,6 +15,7 @@
 
 import unittest
 
+from sawtooth_sdk.consensus.service import Block
 from sawtooth_sdk.consensus.zmq_service import ZmqService
 from sawtooth_sdk.messaging.future import Future
 from sawtooth_sdk.messaging.future import FutureResult
@@ -106,7 +107,7 @@ class TestService(unittest.TestCase):
         self.mock_stream.send.assert_called_with(
             message_type=Message.CONSENSUS_SUMMARIZE_BLOCK_REQUEST,
             content=consensus_pb2.ConsensusSummarizeBlockRequest()
-                .SerializeToString())
+                                 .SerializeToString())
 
         self.assertEqual(result, b'summary')
 
@@ -258,7 +259,11 @@ class TestService(unittest.TestCase):
             content=consensus_pb2.ConsensusChainHeadGetRequest()
             .SerializeToString())
 
-        self.assertEqual(chain_head, block)
+        self.assertEqual(chain_head.block_id, b'block')
+        self.assertEqual(chain_head.previous_id, b'block0')
+        self.assertEqual(chain_head.signer_id, b'signer')
+        self.assertEqual(chain_head.block_num, 1)
+        self.assertEqual(chain_head.payload, b'test')
 
     def test_get_settings(self):
         self.mock_stream.send.return_value = self._make_future(
