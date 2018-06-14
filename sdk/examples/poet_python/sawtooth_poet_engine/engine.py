@@ -64,6 +64,7 @@ class PoetEngine(Engine):
 
         if initialize:
             LOGGER.warning('poet initialization')
+            # self._service.initialize_block(chain_head.block_id)
         else:
             LOGGER.warning('not initializing')
 
