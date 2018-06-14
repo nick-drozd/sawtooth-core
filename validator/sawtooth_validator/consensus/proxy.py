@@ -149,7 +149,7 @@ class ConsensusProxy:
             self._get_blocks([block_id])[0].get_settings_view(
                 self._settings_view_factory)
 
-        return _map_with_none(settings, settings_view.get_settings)
+        return _map_with_none(settings_view.get_setting, settings)
 
     def state_get(self, block_id, addresses):
         '''Returns a list of address/data pairs (str, bytes)'''
@@ -157,7 +157,7 @@ class ConsensusProxy:
             self._get_blocks([block_id])[0].get_state_view(
                 self._state_view_factory)
 
-        return _map_with_none(addresses, state_view.get)
+        return _map_with_none(state_view.get, addresses)
 
     def _get_blocks(self, block_ids):
         try:
@@ -169,7 +169,7 @@ class ConsensusProxy:
             raise UnknownBlock()
 
 
-def _map_with_none(keys, function):
+def _map_with_none(function, keys):
     result = []
 
     for key in keys:
