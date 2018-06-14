@@ -30,14 +30,13 @@ POET_INITIALIZE = 1
 POET_PUBLISH = 0
 POET_FINALIZE = 0
 POET_VERIFY = 0
-POET_FORK = 0
+POET_FORK = 1
 
 
 class PoetEngine(Engine):
     def __init__(self):
         self._exit = False
         self._service = None
-        self._chain_head = None
         self._oracle = None
 
         time.sleep(10)
@@ -143,6 +142,9 @@ class PoetEngine(Engine):
         if POET_FINALIZE:
             try:
                 consensus = self._oracle.finalize_block(summary)
+            except ValueError as err:
+                LOGGER.warning(err)
+                consensus = None
             except:
                 LOGGER.exception('finalize')
 
@@ -182,7 +184,6 @@ class PoetEngine(Engine):
 
     def start(self, updates, service, chain_head, peers):
         self._service = service
-        self._chain_head = chain_head
 
         self._oracle = PoetOracle(service)
 
@@ -245,7 +246,7 @@ class PoetEngine(Engine):
             chain_head.block_id,
             block_id)
 
-        if self._switch_forks(self._chain_head, block):
+        if self._switch_forks(chain_head, block):
             LOGGER.info('Committing %s', block_id)
             self._commit_block(block_id)
         else:
