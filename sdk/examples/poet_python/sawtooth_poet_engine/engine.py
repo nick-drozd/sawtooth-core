@@ -80,7 +80,7 @@ class PoetEngine(Engine):
         LOGGER.info('PoET verification: %s', verify)
 
         # TODO: this should return the verifier's result
-        return True
+        return verify
 
     def _switch_forks(self, current_head, new_head):
         if not POET_FORK:
@@ -97,7 +97,7 @@ class PoetEngine(Engine):
         LOGGER.info('PoET switch forks: %s', switch)
 
         # TODO: this should return the fork resolver's result
-        return True
+        return switch
 
     def _check_block(self, block_id):
         self._service.check_blocks([block_id])
@@ -122,6 +122,8 @@ class PoetEngine(Engine):
             self._service.cancel_block()
         except exceptions.InvalidState:
             pass
+        except:
+            LOGGER.exception('cancel error')
 
     def _summarize_block(self):
         try:
@@ -222,12 +224,9 @@ class PoetEngine(Engine):
                 LOGGER.debug('building: attempting to publish')
                 if self._check_publish_block():
                     LOGGER.debug('finalizing block')
-                    try:
-                        self._finalize_block()
-                        self._published = True
-                        self._building = False
-                    except:
-                        LOGGER.exception('error while finalizing')
+                    self._finalize_block()
+                    self._published = True
+                    self._building = False
 
     def _handle_new_block(self, block):
         block = PoetBlock(block)
