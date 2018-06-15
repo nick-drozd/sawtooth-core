@@ -29,7 +29,7 @@ LOGGER = logging.getLogger(__name__)
 POET_INITIALIZE = 1
 POET_PUBLISH = 1
 POET_FINALIZE = 0
-POET_VERIFY = 0
+POET_VERIFY = 1
 POET_FORK = 0
 
 
@@ -85,17 +85,11 @@ class PoetEngine(Engine):
         if not POET_VERIFY:
             return True
 
-        try:
-            verify = self._oracle.verify_block(block)
-        except:
-            verify = False
-            LOGGER.exception('verify_block')
+        verify = self._oracle.verify_block(block)
 
-        if verify:
-            LOGGER.warning('poet yes')
-        else:
-            LOGGER.warning('poet no')
+        LOGGER.info('PoET verification: %s', verify)
 
+        # TODO: this should return the verifier's result
         return True
 
     def _switch_forks(self, current_head, new_head):
