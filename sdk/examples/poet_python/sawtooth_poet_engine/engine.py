@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 
 POET_INITIALIZE = 1
 POET_PUBLISH = 1
-POET_FINALIZE = 0
+POET_FINALIZE = 1
 POET_VERIFY = 1
 POET_FORK = 1
 
@@ -138,21 +138,15 @@ class PoetEngine(Engine):
             LOGGER.warning('No summary available')
             return None
         else:
-            LOGGER.warning('summary: %s', summary)
+            LOGGER.info('summary: %s', summary)
 
-        if POET_FINALIZE:
-            try:
-                consensus = self._oracle.finalize_block(summary)
-            except ValueError as err:
-                LOGGER.warning(err)
-                consensus = None
-            except:
-                LOGGER.exception('finalize')
-
-            if not consensus:
-                return None
-        else:
+        if not POET_FINALIZE:
             consensus = summary
+        else:
+            consensus = self._oracle.finalize_block(summary)
+
+        if consensus is None:
+            return None
 
         while True:
             try:
@@ -227,9 +221,12 @@ class PoetEngine(Engine):
                 LOGGER.debug('building: attempting to publish')
                 if self._check_publish_block():
                     LOGGER.debug('finalizing block')
-                    self._finalize_block()
-                    self._published = True
-                    self._building = False
+                    try:
+                        self._finalize_block()
+                        self._published = True
+                        self._building = False
+                    except:
+                        LOGGER.exception('error while finalizing')
 
     def _handle_new_block(self, block):
         block = PoetBlock(block)

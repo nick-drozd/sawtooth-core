@@ -129,6 +129,7 @@ class _DummyHeader:
     def __init__(self, block):
         self.consensus = block.payload
         self.signer_public_key = block.signer_id.hex()
+        self.previous_block_id = block.previous_id.hex()
 
 
 class _BlockCacheProxy:
