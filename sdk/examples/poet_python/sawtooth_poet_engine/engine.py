@@ -62,24 +62,14 @@ class PoetEngine(Engine):
             self._service.initialize_block(chain_head.block_id)
             return True
 
-        try:
-            initialize = self._oracle.initialize_block(chain_head)
-        except exceptions.InvalidState as err:
-            LOGGER.warning(err)
-            return False
-        except Exception as err:
-            LOGGER.exception('_initialize_block')
-            return False
+        initialize = self._oracle.initialize_block(chain_head)
+
+        LOGGER.info('PoET initialization: %s', initialize)
 
         if initialize:
-            LOGGER.warning('initialize succeeded')
             self._service.initialize_block(chain_head.block_id)
-        else:
-            LOGGER.warning('initialization failed')
 
         return initialize
-
-        # self._service.initialize_block(chain_head.block_id)
 
     def _check_consensus(self, block):
         if not POET_VERIFY:
