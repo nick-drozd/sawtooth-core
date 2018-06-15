@@ -195,17 +195,15 @@ class PoetEngine(Engine):
         while True:
             try:
                 type_tag, data = updates.get(timeout=1)
-
+            except queue.Empty:
+                pass
+            else:
                 try:
                     handle_message = handlers[type_tag]
                 except KeyError:
                     pass
                 else:
                     handle_message(data)
-
-            except queue.Empty:
-                pass
-                LOGGER.debug('empty queue')
 
             if self._exit:
                 break
