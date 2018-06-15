@@ -78,10 +78,7 @@ class PoetEngine(Engine):
         if not POET_VERIFY:
             return True
 
-        try:
-            verify = self._oracle.verify_block(block)
-        except:
-            LOGGER.exception('check consensus error')
+        verify = self._oracle.verify_block(block)
 
         LOGGER.info('PoET verification: %s', verify)
 
@@ -99,10 +96,6 @@ class PoetEngine(Engine):
         except TypeError as err:
             switch = False
             LOGGER.warning('PoET fork error: %s', err)
-        except:
-            LOGGER.exception('^^^')
-            import sys
-            sys.exit(1)
 
         LOGGER.info('PoET switch forks: %s', switch)
 
@@ -132,8 +125,6 @@ class PoetEngine(Engine):
             self._service.cancel_block()
         except exceptions.InvalidState:
             pass
-        except:
-            LOGGER.exception('cancel error')
 
     def _summarize_block(self):
         try:
