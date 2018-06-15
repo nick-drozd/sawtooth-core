@@ -30,7 +30,7 @@ POET_INITIALIZE = 1
 POET_PUBLISH = 1
 POET_FINALIZE = 0
 POET_VERIFY = 1
-POET_FORK = 0
+POET_FORK = 1
 
 
 class PoetEngine(Engine):
@@ -97,12 +97,15 @@ class PoetEngine(Engine):
             return True
 
         try:
-            return self._oracle.switch_forks(current_head, new_head)
+            switch = self._oracle.switch_forks(current_head, new_head)
+        # The PoET fork resolver raises TypeErrors for non-PoET blocks.
         except TypeError as err:
-            LOGGER.error('PoET fork error: %s', err)
-        except:
-            LOGGER.exception('switch_forks')
+            switch = False
+            LOGGER.warning('PoET fork error: %s', err)
 
+        LOGGER.info('PoET switch forks: %s', switch)
+
+        # TODO: this should return the fork resolver's result
         return True
 
     def _check_block(self, block_id):
