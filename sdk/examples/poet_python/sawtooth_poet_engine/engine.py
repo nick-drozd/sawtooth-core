@@ -43,6 +43,9 @@ class PoetEngine(Engine):
         self._exit = False
         self._published = False
         self._building = False
+        self._committing = False
+
+        self._pending_blocks = queue.Queue()
 
         time.sleep(10)
 
@@ -75,7 +78,10 @@ class PoetEngine(Engine):
         if not POET_VERIFY:
             return True
 
-        verify = self._oracle.verify_block(block)
+        try:
+            verify = self._oracle.verify_block(block)
+        except:
+            LOGGER.exception('check consensus error')
 
         LOGGER.info('PoET verification: %s', verify)
 
@@ -93,6 +99,10 @@ class PoetEngine(Engine):
         except TypeError as err:
             switch = False
             LOGGER.warning('PoET fork error: %s', err)
+        except:
+            LOGGER.exception('^^^')
+            import sys
+            sys.exit(1)
 
         LOGGER.info('PoET switch forks: %s', switch)
 
@@ -197,7 +207,7 @@ class PoetEngine(Engine):
             except queue.Empty:
                 pass
             else:
-                LOGGER.error('--> %s -- %s', type_tag, data)
+                LOGGER.debug('Received message: %s -- %s', type_tag, data)
 
                 try:
                     handle_message = handlers[type_tag]
@@ -245,19 +255,38 @@ class PoetEngine(Engine):
     def _handle_valid_block(self, block_id):
         block = self._get_block(block_id)
 
+        LOGGER.error('Valid block --> %s', block)
+
         chain_head = self._get_chain_head()
+
+        if self._committing:
+            LOGGER.info(
+                'Waiting for block to be committed before resolving fork')
+            self._pending_blocks.put(block)
+            return
+
+        try:
+            queued_block = self._pending_blocks.get(timeout=1)
+        except queue.Empty:
+            LOGGER.debug('No pending blocks')
+            pass
+        else:
+            LOGGER.debug('Handling pending block')
+            self._pending_blocks.put(block)
+            block = queued_block
 
         LOGGER.info(
             'Choosing between chain heads -- current: %s -- new: %s',
-            chain_head.block_id,
-            block_id)
+            chain_head,
+            block)
 
         if self._switch_forks(chain_head, block):
-            LOGGER.info('Committing %s', block_id)
-            self._commit_block(block_id)
+            LOGGER.info('Committing %s', block)
+            self._commit_block(block.block_id)
+            self._committing = True
         else:
-            LOGGER.info('Ignoring %s', block_id)
-            self._ignore_block(block_id)
+            LOGGER.info('Ignoring %s', block)
+            self._ignore_block(block.block_id)
 
     def _handle_committed_block(self, _block_id):
         chain_head = self._get_chain_head()
@@ -270,3 +299,4 @@ class PoetEngine(Engine):
 
         self._building = False
         self._published = False
+        self._committing = False
