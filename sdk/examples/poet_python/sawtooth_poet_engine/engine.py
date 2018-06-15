@@ -88,7 +88,8 @@ class PoetEngine(Engine):
 
         try:
             switch = self._oracle.switch_forks(current_head, new_head)
-        # The PoET fork resolver raises TypeErrors for non-PoET blocks.
+        # The PoET fork resolver raises TypeErrors in certain cases,
+        # e.g. when it encounters non-PoET blocks.
         except TypeError as err:
             switch = False
             LOGGER.warning('PoET fork error: %s', err)
