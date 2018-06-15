@@ -160,9 +160,11 @@ class PoetEngine(Engine):
                 LOGGER.info('finalized %s with %s', block_id, consensus)
                 return block_id
             except exceptions.BlockNotReady:
+                LOGGER.warning('block not ready')
                 time.sleep(1)
                 continue
             except exceptions.InvalidState:
+                LOGGER.warning('block cannot be finalized')
                 return None
 
     def _check_publish_block(self):
@@ -213,18 +215,18 @@ class PoetEngine(Engine):
             # publisher activity #
 
             if self._published:
-                LOGGER.warning('already published at this height')
+                LOGGER.debug('already published at this height')
                 continue
 
             if not self._building:
-                LOGGER.warning('not building: attempting to initialize')
+                LOGGER.debug('not building: attempting to initialize')
                 if self._initialize_block():
                     self._building = True
 
             if self._building:
-                LOGGER.warning('building: attempting to publish')
+                LOGGER.debug('building: attempting to publish')
                 if self._check_publish_block():
-                    LOGGER.warning('finalizing block')
+                    LOGGER.debug('finalizing block')
                     self._finalize_block()
                     self._published = True
                     self._building = False
