@@ -116,13 +116,17 @@ class PoetBlock:
         self.summary = block.summary
 
         # fields that poet requires
-        self.identifier = block.block_id
+        self.identifier = block.block_id.hex()
+        self.header_signature = block.block_id.hex()
         self.previous_block_id = block.previous_id.hex()
         self.signer_public_key = block.signer_id.hex()
         self.header = _DummyHeader(block)
 
         # this is a trick
         self.state_root_hash = block.block_id
+
+    def __str__(self):
+        return 'block_num: {} | block_id: {} | identifier: {} | previous_id: {} | previous_block_id: {}'.format(self.block_num, self.block_id, self.identifier, self.previous_id, self.previous_block_id)
 
 
 class _DummyHeader:
@@ -139,6 +143,7 @@ class _BlockCacheProxy:
 
     def __getitem__(self, block_id):
         block_id = bytes.fromhex(block_id)
+
         try:
             return PoetBlock(self._service.get_blocks([block_id])[block_id])
         except UnknownBlock:
