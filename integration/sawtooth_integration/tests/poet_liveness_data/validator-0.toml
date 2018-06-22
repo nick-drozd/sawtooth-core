@@ -36,7 +36,7 @@ bind = [
 # and 'dynamic' which will do topology buildouts. If 'dynamic' is provided,
 # any static peers will be processed first, prior to the topology buildout
 # starting.
-peering = "dynamic"
+peering = "static"
 
 # Advertised network endpoint URL.
 endpoint = "tcp://validator-0:8800"
@@ -44,11 +44,11 @@ endpoint = "tcp://validator-0:8800"
 # Uri(s) to connect to in order to initially connect to the validator network,
 # in the format tcp://hostname:port. This is not needed in static peering mode
 # and defaults to None.
-seeds = []
+# seeds = []
 
 # A list of peers to attempt to connect to in the format tcp://hostname:port.
 # It defaults to None.
-#peers = []
+peers = []
 
 # The type of scheduler to use. The choices are 'serial' or 'parallel'.
 scheduler = 'parallel'
