@@ -68,7 +68,7 @@ class PoetOracle:
     def initialize_block(self, previous_block):
         block_header = NewBlockHeader(
             previous_block,
-            self._signer.get_public_key().as_hex())
+            self._validator_id)
 
         self._publisher = PoetBlockPublisher(
             block_cache=self._block_cache,
@@ -141,9 +141,9 @@ class PoetBlock:
             "Block("
             + ", ".join([
                 "block_num: {}".format(self.block_num),
-                "block_id: {}".format(self.block_id.hex()),
-                "previous_id: {}".format(self.previous_id.hex()),
-                "signer_id: {}".format(self.signer_id.hex()),
+                "block_id: {}".format(self.identifier),
+                "previous_id: {}".format(self.previous_block_id),
+                "signer_id: {}".format(self.signer_public_key),
                 "payload: {}".format(self.payload),
                 "summary: {}".format(self.summary.hex()),
             ])

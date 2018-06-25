@@ -211,10 +211,10 @@ class PoetEngine(Engine):
         LOGGER.info('Received %s', block)
 
         if self._check_consensus(block):
-            LOGGER.info('Passed consensus check: %s', block.block_id.hex())
+            LOGGER.info('Passed consensus check: %s', block.identifier)
             self._check_block(block.block_id)
         else:
-            LOGGER.info('Failed consensus check: %s', block.block_id.hex())
+            LOGGER.info('Failed consensus check: %s', block.identifier)
             self._fail_block(block.block_id)
 
     def _handle_valid_block(self, block_id):
@@ -237,15 +237,15 @@ class PoetEngine(Engine):
 
         LOGGER.info(
             'Choosing between chain heads -- current: %s -- new: %s',
-            chain_head.block_id.hex(),
-            block.block_id.hex())
+            chain_head.identifier,
+            block.identifier)
 
         if self._switch_forks(chain_head, block):
-            LOGGER.info('Committing %s', block.block_id.hex())
+            LOGGER.info('Committing %s', block.identifier)
             self._commit_block(block.block_id)
             self._committing = True
         else:
-            LOGGER.info('Ignoring %s', block.block_id.hex())
+            LOGGER.info('Ignoring %s', block.identifier)
             self._ignore_block(block.block_id)
 
     def _handle_committed_block(self, block_id):
